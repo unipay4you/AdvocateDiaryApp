@@ -3,6 +3,7 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/profile_update_screen.dart';
+import 'screens/register_screen.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(
               userData: {},
               cases: [],
