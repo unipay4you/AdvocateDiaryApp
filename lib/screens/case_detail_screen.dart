@@ -59,7 +59,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
         children: [
           // Case Details Tab
           SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -69,6 +69,14 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                     _buildDetailRow('CRN', widget.caseData['crn'] ?? 'N/A'),
                     _buildDetailRow('Case Number',
                         '#${widget.caseData['case_no']}/${widget.caseData['case_year']}'),
+                    _buildDetailRow(
+                        'FIR',
+                        widget.caseData['fir_number'] != null &&
+                                widget.caseData['fir_number']
+                                    .toString()
+                                    .isNotEmpty
+                            ? '${widget.caseData['fir_number']}/${widget.caseData['fir_year'] ?? ''} ${widget.caseData['police_station'] != null ? 'ps ${widget.caseData['police_station']}' : ''}'
+                            : 'N/A'),
                     _buildDetailRow(
                         'Court Type', widget.caseData['court_type'] ?? 'N/A'),
                     _buildDetailRow('Court',
@@ -85,7 +93,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                         'Reference', widget.caseData['sub_advocate'] ?? 'N/A'),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 _buildDetailCard(
                   'Parties',
                   [
@@ -97,7 +105,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                         'Client Type', widget.caseData['client_type'] ?? 'N/A'),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 _buildDetailCard(
                   'Dates',
                   [
@@ -108,7 +116,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                   ],
                 ),
                 if (widget.caseData['comments']?.isNotEmpty ?? false) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 4),
                   _buildDetailCard(
                     'Comments',
                     [
@@ -122,22 +130,37 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                     ],
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Column(
                   children: [
-                    // First row - Edit Case button
-                    SizedBox(
-                      width: double.infinity,
-                      child: _buildActionButton(
-                        context,
-                        Icons.edit,
-                        'Edit Case',
-                        () {
-                          // TODO: Implement edit case functionality
-                        },
-                      ),
+                    // First row - Edit Case and Clients buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            context,
+                            Icons.edit,
+                            'Edit Case',
+                            () {
+                              // TODO: Implement edit case functionality
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: _buildActionButton(
+                            context,
+                            Icons.people,
+                            'Clients',
+                            () {
+                              // TODO: Implement clients functionality
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 4),
                     // Second row - Case History and Court Transfer
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -262,7 +285,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                 color: Colors.black,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             ...children,
           ],
         ),

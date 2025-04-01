@@ -675,8 +675,15 @@ class HomeScreen extends StatelessWidget {
                               margin: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color.fromRGBO(235, 235, 234, 1),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: InkWell(
                                 onTap: () {
@@ -690,7 +697,7 @@ class HomeScreen extends StatelessWidget {
                                   );
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
+                                  padding: const EdgeInsets.all(12),
                                   child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -838,7 +845,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
                             if (index < cases.length - 1)
-                              const Divider(height: 1),
+                              const SizedBox(height: 4),
                           ],
                         );
                       }).toList(),
