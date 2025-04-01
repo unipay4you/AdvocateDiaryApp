@@ -3,6 +3,7 @@ import 'package:flutter_carousel_widget/flutter_carousel_widget.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
 import '../config/app_config.dart';
+import 'case_detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -677,144 +678,162 @@ class HomeScreen extends StatelessWidget {
                                 color: const Color.fromRGBO(235, 235, 234, 1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Leading icon
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color.fromRGBO(
-                                            123, 109, 217, 1),
-                                        shape: BoxShape.circle,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => CaseDetailScreen(
+                                        caseData: caseData,
                                       ),
-                                      child: const Icon(Icons.gavel,
-                                          color: Colors.white, size: 20),
                                     ),
-                                    const SizedBox(width: 12),
-                                    // Content
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Line 1: Petitioner vs Respondent with conditional bold
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  caseData['petitioner'] ?? '',
-                                                  style: petitionerStyle,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Leading icon
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color.fromRGBO(
+                                              123, 109, 217, 1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.gavel,
+                                            color: Colors.white, size: 20),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      // Content
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            // Line 1: Petitioner vs Respondent with conditional bold
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    caseData['petitioner'] ??
+                                                        '',
+                                                    style: petitionerStyle,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
                                                 ),
-                                              ),
-                                              const Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                    horizontal: 8),
-                                                child: Text('vs'),
-                                              ),
-                                              Expanded(
-                                                child: Text(
-                                                  caseData['respondent'] ?? '',
-                                                  style: respondentStyle,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                const Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 8),
+                                                  child: Text('vs'),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // Line 2: Case number and year
-                                          Text(
-                                            '#${caseData['case_no']}/${caseData['case_year']}',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey,
+                                                Expanded(
+                                                  child: Text(
+                                                    caseData['respondent'] ??
+                                                        '',
+                                                    style: respondentStyle,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // Line 3: Court number and Reference (darker text)
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'Court No: ${caseData['court_no']}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                            const SizedBox(height: 8),
+                                            // Line 2: Case number and year
+                                            Text(
+                                              '#${caseData['case_no']}/${caseData['case_year']}',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey,
                                               ),
-                                              const SizedBox(width: 16),
-                                              Text(
-                                                'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // Line 4: Stage of case
-                                          Text(
-                                            caseData['stage_of_case']
-                                                    ['stage_of_case'] ??
-                                                '',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.blue,
-                                              fontWeight: FontWeight.w500,
                                             ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // Line 5: Last date and Next date (darker text for Last date)
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                'Last: ${caseData['last_date'] ?? 'N/A'}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: () async {
-                                                  final DateTime? picked =
-                                                      await showDatePicker(
-                                                    context: context,
-                                                    initialDate: DateTime.now(),
-                                                    firstDate: DateTime(2000),
-                                                    lastDate: DateTime(2100),
-                                                  );
-                                                  if (picked != null) {
-                                                    // TODO: Update next date in backend
-                                                    print(
-                                                        'Selected next date: ${picked.toString()}');
-                                                  }
-                                                },
-                                                child: Text(
-                                                  'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                            const SizedBox(height: 8),
+                                            // Line 3: Court number and Reference (darker text)
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Court No: ${caseData['court_no']}',
                                                   style: const TextStyle(
                                                     fontSize: 14,
                                                     color: Colors.black87,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
+                                                const SizedBox(width: 16),
+                                                Text(
+                                                  'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            // Line 4: Stage of case
+                                            Text(
+                                              caseData['stage_of_case']
+                                                      ['stage_of_case'] ??
+                                                  '',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.blue,
+                                                fontWeight: FontWeight.w500,
                                               ),
-                                            ],
-                                          ),
-                                        ],
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            // Line 5: Last date and Next date (darker text for Last date)
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Text(
+                                                  'Last: ${caseData['last_date'] ?? 'N/A'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    final DateTime? picked =
+                                                        await showDatePicker(
+                                                      context: context,
+                                                      initialDate:
+                                                          DateTime.now(),
+                                                      firstDate: DateTime(2000),
+                                                      lastDate: DateTime(2100),
+                                                    );
+                                                    if (picked != null) {
+                                                      // TODO: Update next date in backend
+                                                      print(
+                                                          'Selected next date: ${picked.toString()}');
+                                                    }
+                                                  },
+                                                  child: Text(
+                                                    'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.black87,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
