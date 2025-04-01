@@ -711,7 +711,11 @@ class HomeScreen extends StatelessWidget {
                                                       TextOverflow.ellipsis,
                                                 ),
                                               ),
-                                              const Text(' vs '),
+                                              const Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 8),
+                                                child: Text('vs'),
+                                              ),
                                               Expanded(
                                                 child: Text(
                                                   caseData['respondent'] ?? '',
@@ -734,8 +738,6 @@ class HomeScreen extends StatelessWidget {
                                           const SizedBox(height: 8),
                                           // Line 3: Court number and Reference (darker text)
                                           Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                 'Court No: ${caseData['court_no']}',
@@ -745,6 +747,7 @@ class HomeScreen extends StatelessWidget {
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
+                                              const SizedBox(width: 16),
                                               Text(
                                                 'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
                                                 style: const TextStyle(
@@ -777,17 +780,33 @@ class HomeScreen extends StatelessWidget {
                                               Text(
                                                 'Last: ${caseData['last_date'] ?? 'N/A'}',
                                                 style: const TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 14,
                                                   color: Colors.black87,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
-                                              Text(
-                                                'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  final DateTime? picked =
+                                                      await showDatePicker(
+                                                    context: context,
+                                                    initialDate: DateTime.now(),
+                                                    firstDate: DateTime(2000),
+                                                    lastDate: DateTime(2100),
+                                                  );
+                                                  if (picked != null) {
+                                                    // TODO: Update next date in backend
+                                                    print(
+                                                        'Selected next date: ${picked.toString()}');
+                                                  }
+                                                },
+                                                child: Text(
+                                                  'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -1022,7 +1041,122 @@ class HomeScreen extends StatelessWidget {
           child: ListTile(
             onTap: () {
               print('Test 2: Case tapped - ID: ${caseData['id']}');
-              // TODO: Navigate to case detail screen with case ID
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(235, 235, 234, 1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Case Details',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Case No: #${caseData['case_no']}/${caseData['case_year']}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Petitioner: ${caseData['petitioner'] ?? 'N/A'}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            'Respondent: ${caseData['respondent'] ?? 'N/A'}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            'Court No: ${caseData['court_no']}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            'Stage: ${caseData['stage_of_case']['stage_of_case'] ?? 'N/A'}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            'Last Date: ${caseData['last_date'] ?? 'N/A'}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            'Next Date: ${caseData['next_date'] ?? 'N/A'}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  // TODO: Implement edit case functionality
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color.fromRGBO(123, 109, 217, 1),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Edit Case'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // TODO: Implement view documents functionality
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color.fromRGBO(123, 109, 217, 1),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('View Documents'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // TODO: Implement add hearing functionality
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color.fromRGBO(123, 109, 217, 1),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Add Hearing'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
             },
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1089,15 +1223,17 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       'Last: ${caseData['last_date'] ?? 'N/A'}',
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       'Next: ${caseData['next_date'] ?? 'N/A'}',
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],

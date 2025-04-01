@@ -1,5 +1,5 @@
 class AppConfig {
-  static const bool isDevelopment = false; // Change this to false for production
+  static const bool isDevelopment = true; // Change this to false for production
   static const String baseAPI = isDevelopment
       ? 'http://10.0.2.2:8000' // For Android Emulator
       : 'https://mylegaldiary.in';
