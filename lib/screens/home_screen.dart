@@ -7,6 +7,7 @@ import 'case_detail_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/date_update_dialog.dart';
+import 'filtered_cases_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -694,7 +695,35 @@ class HomeScreen extends StatelessWidget {
                 children: caseContainers.map((item) {
                   print(
                       'Test 16: Building case container for ${item['title']}');
-                  return Container(
+                  return InkWell(
+                    onTap: () {
+                      String filter = '';
+                      switch (item['title']) {
+                        case "Today's Cases":
+                          filter = 'today';
+                          break;
+                        case 'Tomorrow Cases':
+                          filter = 'tommarow';
+                          break;
+                        case 'Date Awaited Case':
+                          filter = 'date_awaited';
+                          break;
+                        case 'All Cases':
+                          filter = '';
+                          break;
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FilteredCasesScreen(
+                            filter: filter,
+                            userData: userData,
+                            count: count,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -763,6 +792,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                       ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -890,132 +920,132 @@ class HomeScreen extends StatelessWidget {
                                   print(
                                       '=== End Navigation to Case Detail ===\n');
                                 },
-                                child: Padding(
+                              child: Padding(
                                   padding: const EdgeInsets.all(12),
-                                  child: Row(
+                                child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: const Color.fromRGBO(
-                                              123, 109, 217, 1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.gavel,
-                                            color: Colors.white, size: 20),
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromRGBO(
+                                            123, 109, 217, 1),
+                                        shape: BoxShape.circle,
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
+                                      child: const Icon(Icons.gavel,
+                                          color: Colors.white, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
                                                     caseData['petitioner'] ??
                                                         '',
-                                                    style: petitionerStyle,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
+                                                  style: petitionerStyle,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
+                                              ),
                                                 const Padding(
                                                   padding: EdgeInsets.symmetric(
                                                       horizontal: 8),
                                                   child: Text('vs'),
                                                 ),
-                                                Expanded(
-                                                  child: Text(
+                                              Expanded(
+                                                child: Text(
                                                     caseData['respondent'] ??
                                                         '',
-                                                    style: respondentStyle,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
+                                                  style: respondentStyle,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              '#${caseData['case_no']}/${caseData['case_year']}',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey,
                                               ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            '#${caseData['case_no']}/${caseData['case_year']}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  'Court No: ${caseData['court_no']}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.black87,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Court No: ${caseData['court_no']}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.black87,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
+                                              ),
                                                 const SizedBox(width: 16),
-                                                Text(
-                                                  'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.black87,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                              Text(
+                                                'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.black87,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              caseData['stage_of_case']
-                                                      ['stage_of_case'] ??
-                                                  '',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.blue,
-                                                fontWeight: FontWeight.w500,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            caseData['stage_of_case']
+                                                    ['stage_of_case'] ??
+                                                '',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.w500,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment:
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment:
                                                   MainAxisAlignment
                                                       .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Last: ${caseData['last_date'] ?? 'N/A'}',
-                                                  style: const TextStyle(
+                                            children: [
+                                              Text(
+                                                'Last: ${caseData['last_date'] ?? 'N/A'}',
+                                                style: const TextStyle(
                                                     fontSize: 14,
-                                                    color: Colors.black87,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                                  color: Colors.black87,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
+                                              ),
                                                 GestureDetector(
                                                   onTap: () {
                                                     _showNextDateUpdateDialog(
                                                         context, caseData);
                                                   },
                                                   child: Text(
-                                                    'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                    style: const TextStyle(
+                                                'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                style: const TextStyle(
                                                       fontSize: 14,
-                                                      color: Colors.black87,
+                                                  color: Colors.black87,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
-                                                  ),
                                                 ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
+                                  ],
                                   ),
                                 ),
                               ),
