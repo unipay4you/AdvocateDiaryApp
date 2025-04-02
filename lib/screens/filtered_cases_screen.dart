@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../services/api_service.dart';
 import '../config/app_config.dart';
 import 'case_detail_screen.dart';
+import '../utils/date_update_dialog.dart';
 
 class FilteredCasesScreen extends StatefulWidget {
   final String filter;
@@ -80,6 +81,26 @@ class _FilteredCasesScreenState extends State<FilteredCasesScreen> {
         isLoading = false;
       });
     }
+  }
+
+  Future<void> _showNextDateUpdateDialog(
+      BuildContext context, Map<String, dynamic> caseData) async {
+    print('\n=== Starting Next Date Update Dialog ===');
+    print('Test 1: Opening date update dialog');
+
+    await showDateUpdateDialog(
+      context,
+      caseData,
+      cases,
+      widget.userData,
+      widget.count,
+    ).then((_) async {
+      print('Test 2: Date update dialog closed');
+      print('Test 3: Refreshing filtered cases');
+      await _fetchFilteredCases();
+      print('Test 4: Filtered cases refreshed');
+      print('=== End Next Date Update Dialog ===\n');
+    });
   }
 
   String _getTitle() {
@@ -343,15 +364,23 @@ class _FilteredCasesScreenState extends State<FilteredCasesScreen> {
                                                                 FontWeight.bold,
                                                           ),
                                                         ),
-                                                        Text(
-                                                          'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize: 14,
-                                                            color:
-                                                                Colors.black87,
-                                                            fontWeight:
-                                                                FontWeight.bold,
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            _showNextDateUpdateDialog(
+                                                                context,
+                                                                caseData);
+                                                          },
+                                                          child: Text(
+                                                            'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 14,
+                                                              color: Colors
+                                                                  .black87,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
                                                           ),
                                                         ),
                                                       ],
