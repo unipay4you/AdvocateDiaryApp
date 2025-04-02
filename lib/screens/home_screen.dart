@@ -4,6 +4,9 @@ import '../services/api_service.dart';
 import 'login_screen.dart';
 import '../config/app_config.dart';
 import 'case_detail_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../utils/date_update_dialog.dart';
 
 class HomeScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -92,6 +95,153 @@ class HomeScreen extends StatelessWidget {
   String _capitalizeFirstLetter(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchStages() async {
+    try {
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}case/stage/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data
+            .map((stage) => {
+                  'id': stage['id'],
+                  'stage_of_case': stage['stage_of_case'],
+                })
+            .toList();
+      } else {
+        throw Exception('Failed to load stages');
+      }
+    } catch (e) {
+      print('Error fetching stages: $e');
+      return [];
+    }
+  }
+
+  String _getMonthName(int month) {
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return monthNames[month - 1];
+  }
+
+  Future<void> _showNextDateUpdateDialog(
+      BuildContext context, Map<String, dynamic> caseData) async {
+    await showDateUpdateDialog(
+      context,
+      caseData,
+      cases,
+      userData,
+      count,
+    );
+  }
+
+  Future<Map<String, dynamic>> _fetchFreshData() async {
+    try {
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+
+      print('\n=== Starting Fresh Data Fetch ===');
+      print('Test 1: Making POST request to user/ endpoint');
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}user/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Test 2: Response status code: ${response.statusCode}');
+      print('Test 3: Raw response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('Test 4: Decoded response data type: ${data.runtimeType}');
+        print('Test 5: Decoded response data: $data');
+
+        if (data == null) {
+          print('Test 6: Response data is null');
+          throw Exception('Invalid response data');
+        }
+
+        // The response is a Map, so we can access the data directly
+        if (data is Map<String, dynamic>) {
+          print('Test 7: Response is a Map with keys: ${data.keys.toList()}');
+
+          if (data['userData'] != null) {
+            print('Test 8: userData type: ${data['userData'].runtimeType}');
+            print('Test 9: userData content: ${data['userData']}');
+          }
+
+          if (data['cases'] != null) {
+            print('Test 10: cases type: ${data['cases'].runtimeType}');
+            print('Test 11: cases length: ${data['cases'].length}');
+          }
+
+          if (data['count'] != null) {
+            print('Test 12: count type: ${data['count'].runtimeType}');
+            print('Test 13: count content: ${data['count']}');
+          }
+
+          print('Test 14: Attempting to create return map');
+
+          // Handle userData which is a List
+          final userDataList = data['userData'] as List<dynamic>;
+          if (userDataList.isEmpty) {
+            throw Exception('User data is empty');
+          }
+          final userDataMap = userDataList[0] as Map<String, dynamic>;
+
+          final returnMap = {
+            'userData': userDataMap,
+            'cases': data['cases'] as List<dynamic>,
+            'count': data['count'] as Map<String, dynamic>,
+          };
+
+          print('Test 15: Successfully created return map');
+          print('Test 16: Return map keys: ${returnMap.keys.toList()}');
+          print(
+              'Test 17: Return map userData type: ${returnMap['userData'].runtimeType}');
+          print(
+              'Test 18: Return map cases type: ${returnMap['cases'].runtimeType}');
+          print(
+              'Test 19: Return map count type: ${returnMap['count'].runtimeType}');
+          return returnMap;
+        } else {
+          print('Test 20: Invalid response format - expected a Map');
+          throw Exception('Invalid response format');
+        }
+      } else {
+        print('Test 21: Error response: ${response.body}');
+        throw Exception('Failed to load data: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('\n=== Error in _fetchFreshData ===');
+      print('Test 22: Error: $e');
+      print('Test 23: Stack trace: $stackTrace');
+      print('================\n');
+      rethrow;
+    }
   }
 
   @override
@@ -687,14 +837,58 @@ class HomeScreen extends StatelessWidget {
                               ),
                               child: InkWell(
                                 onTap: () {
+                                  print(
+                                      '\n=== Starting Navigation to Case Detail ===');
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => CaseDetailScreen(
                                         caseData: caseData,
+                                        cases: cases,
+                                        userData: userData,
+                                        count: count,
                                       ),
                                     ),
-                                  );
+                                  ).then((_) async {
+                                    print(
+                                        'Test 1: Returned from CaseDetailScreen');
+                                    try {
+                                      print(
+                                          'Test 2: Starting fresh data fetch');
+                                      final freshData = await _fetchFreshData();
+                                      print(
+                                          'Test 3: Fresh data received successfully');
+                                      if (context.mounted) {
+                                        print(
+                                            'Test 4: Navigating to new HomeScreen with fresh data');
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => HomeScreen(
+                                              userData: freshData['userData'],
+                                              cases: freshData['cases'],
+                                              count: freshData['count'],
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      print(
+                                          'Test 5: Error refreshing data: $e');
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Error refreshing data: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  });
+                                  print(
+                                      '=== End Navigation to Case Detail ===\n');
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(12),
@@ -702,7 +896,6 @@ class HomeScreen extends StatelessWidget {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // Leading icon
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
@@ -714,13 +907,11 @@ class HomeScreen extends StatelessWidget {
                                             color: Colors.white, size: 20),
                                       ),
                                       const SizedBox(width: 12),
-                                      // Content
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            // Line 1: Petitioner vs Respondent with conditional bold
                                             Row(
                                               children: [
                                                 Expanded(
@@ -749,7 +940,6 @@ class HomeScreen extends StatelessWidget {
                                               ],
                                             ),
                                             const SizedBox(height: 8),
-                                            // Line 2: Case number and year
                                             Text(
                                               '#${caseData['case_no']}/${caseData['case_year']}',
                                               style: const TextStyle(
@@ -758,7 +948,6 @@ class HomeScreen extends StatelessWidget {
                                               ),
                                             ),
                                             const SizedBox(height: 8),
-                                            // Line 3: Court number and Reference (darker text)
                                             Row(
                                               children: [
                                                 Text(
@@ -781,7 +970,6 @@ class HomeScreen extends StatelessWidget {
                                               ],
                                             ),
                                             const SizedBox(height: 8),
-                                            // Line 4: Stage of case
                                             Text(
                                               caseData['stage_of_case']
                                                       ['stage_of_case'] ??
@@ -794,7 +982,6 @@ class HomeScreen extends StatelessWidget {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 8),
-                                            // Line 5: Last date and Next date (darker text for Last date)
                                             Row(
                                               mainAxisAlignment:
                                                   MainAxisAlignment
@@ -809,20 +996,9 @@ class HomeScreen extends StatelessWidget {
                                                   ),
                                                 ),
                                                 GestureDetector(
-                                                  onTap: () async {
-                                                    final DateTime? picked =
-                                                        await showDatePicker(
-                                                      context: context,
-                                                      initialDate:
-                                                          DateTime.now(),
-                                                      firstDate: DateTime(2000),
-                                                      lastDate: DateTime(2100),
-                                                    );
-                                                    if (picked != null) {
-                                                      // TODO: Update next date in backend
-                                                      print(
-                                                          'Selected next date: ${picked.toString()}');
-                                                    }
+                                                  onTap: () {
+                                                    _showNextDateUpdateDialog(
+                                                        context, caseData);
                                                   },
                                                   child: Text(
                                                     'Next: ${caseData['next_date'] ?? 'N/A'}',
