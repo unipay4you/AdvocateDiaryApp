@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/date_update_dialog.dart';
 import 'filtered_cases_screen.dart';
+import 'add_case_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -683,6 +684,71 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // Add New Case and Daily List Buttons
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        print('Test 17.1: Add New Case button pressed');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddCaseScreen(
+                              userData: userData,
+                              count: count,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Add New Case',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        print('Test 17.2: Daily List button pressed');
+                        // TODO: Navigate to daily list screen
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Daily List',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Case Containers
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1114,7 +1180,15 @@ class HomeScreen extends StatelessWidget {
                             () {
                               print('Test 19: New Case button pressed');
                               Navigator.pop(context);
-                              // TODO: Navigate to add case screen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddCaseScreen(
+                                    userData: userData,
+                                    count: count,
+                                  ),
+                                ),
+                              );
                             },
                           ),
                           _buildActionButton(
