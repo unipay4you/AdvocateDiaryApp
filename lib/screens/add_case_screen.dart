@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'home_screen.dart';
 
 class AddCaseScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -24,6 +25,7 @@ class AddCaseScreen extends StatefulWidget {
 class _AddCaseScreenState extends State<AddCaseScreen> {
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
+  bool isInitialLoading = true;
   File? _document;
   final ImagePicker _picker = ImagePicker();
 
@@ -51,6 +53,11 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
   String? _selectedClientType;
   String? _selectedCourt;
   String? _selectedCourtType;
+  String? _selectedState;
+  String? _selectedDistrict;
+  List<Map<String, dynamic>> _districtsData = [];
+  List<String> _uniqueStates = [];
+  List<String> _filteredDistricts = [];
 
   List<Map<String, dynamic>> _caseTypes = [];
   List<Map<String, dynamic>> _stageOfCases = [];
@@ -67,8 +74,16 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDropdownData();
     _initializeYears();
+    _loadDistricts().then((_) {
+      return _fetchDropdownData();
+    }).then((_) {
+      if (mounted) {
+        setState(() {
+          isInitialLoading = false;
+        });
+      }
+    });
   }
 
   Future<void> _fetchDropdownData() async {
@@ -79,8 +94,86 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
       print(
           'TEST 1.1: Token retrieved successfully: ${token != null ? token.substring(0, 10) : "null"}...');
 
+      // Fetch case types
+      print('TEST 1.2: Fetching case types...');
+      final caseTypesResponse = await http.get(
+        Uri.parse('${AppConfig.baseUrl}getcasetype/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      print(
+          'TEST 1.3: Case types response status: ${caseTypesResponse.statusCode}');
+      print('TEST 1.4: Case types response body: ${caseTypesResponse.body}');
+
+      if (caseTypesResponse.statusCode == 200) {
+        print('TEST 1.5: Case types API response successful');
+        setState(() {
+          try {
+            final responseData = json.decode(caseTypesResponse.body);
+            if (responseData is List) {
+              _caseTypes = List<Map<String, dynamic>>.from(responseData);
+              print(
+                  'TEST 1.6: Case types parsed successfully: ${_caseTypes.length} items');
+              if (_caseTypes.isNotEmpty) {
+                print('TEST 1.7: First case type: ${_caseTypes[0]}');
+              }
+            } else {
+              print('TEST 1.8: Case types data is not a list');
+              _caseTypes = [];
+            }
+          } catch (e) {
+            print('TEST 1.9: Error parsing case types: $e');
+            _caseTypes = [];
+          }
+        });
+      } else {
+        print('TEST 1.10: Error: Case types API response failed');
+        print('TEST 1.11: Case types status: ${caseTypesResponse.statusCode}');
+      }
+
+      // Fetch case stages
+      print('TEST 1.12: Fetching case stages...');
+      final stagesResponse = await http.get(
+        Uri.parse('${AppConfig.baseUrl}case/stage/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      print(
+          'TEST 1.13: Case stages response status: ${stagesResponse.statusCode}');
+      print('TEST 1.14: Case stages response body: ${stagesResponse.body}');
+
+      if (stagesResponse.statusCode == 200) {
+        print('TEST 1.15: Case stages API response successful');
+        setState(() {
+          try {
+            final responseData = json.decode(stagesResponse.body);
+            if (responseData is List) {
+              _stageOfCases = List<Map<String, dynamic>>.from(responseData);
+              print(
+                  'TEST 1.16: Case stages parsed successfully: ${_stageOfCases.length} items');
+              if (_stageOfCases.isNotEmpty) {
+                print('TEST 1.17: First case stage: ${_stageOfCases[0]}');
+              }
+            } else {
+              print('TEST 1.18: Case stages data is not a list');
+              _stageOfCases = [];
+            }
+          } catch (e) {
+            print('TEST 1.19: Error parsing case stages: $e');
+            _stageOfCases = [];
+          }
+        });
+      } else {
+        print('TEST 1.20: Error: Case stages API response failed');
+        print('TEST 1.21: Case stages status: ${stagesResponse.statusCode}');
+      }
+
       // Fetch court types
-      print('TEST 1.2: Fetching court types...');
+      print('TEST 1.22: Fetching court types...');
       final courtTypesResponse = await http.get(
         Uri.parse('${AppConfig.baseUrl}getcourttype/'),
         headers: {
@@ -89,21 +182,20 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
         },
       );
       print(
-          'TEST 1.3: Court types response status: ${courtTypesResponse.statusCode}');
-      print('TEST 1.4: Court types response body: ${courtTypesResponse.body}');
+          'TEST 1.23: Court types response status: ${courtTypesResponse.statusCode}');
+      print('TEST 1.24: Court types response body: ${courtTypesResponse.body}');
 
       if (courtTypesResponse.statusCode == 200) {
-        print(
-            'TEST 1.5: Court types API response successful, updating state...');
+        print('TEST 1.25: Court types API response successful');
         setState(() {
           try {
-            final courtTypesData = json.decode(courtTypesResponse.body);
-            if (courtTypesData is List) {
-              _courtTypes = List<Map<String, dynamic>>.from(courtTypesData);
+            final responseData = json.decode(courtTypesResponse.body);
+            if (responseData is List) {
+              _courtTypes = List<Map<String, dynamic>>.from(responseData);
               print(
-                  'TEST 1.6: Court types parsed successfully: ${_courtTypes.length} items');
+                  'TEST 1.26: Court types parsed successfully: ${_courtTypes.length} items');
               if (_courtTypes.isNotEmpty) {
-                print('TEST 1.7: First court type: ${_courtTypes[0]}');
+                print('TEST 1.27: First court type: ${_courtTypes[0]}');
 
                 // Set District Court as default if available
                 final districtCourtIndex = _courtTypes.indexWhere(
@@ -112,37 +204,36 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
                   setState(() {
                     _selectedCourtType =
                         _courtTypes[districtCourtIndex]['court_type'];
-                    print('TEST 1.8: Default court type set to District Court');
+                    print(
+                        'TEST 1.28: Default court type set to District Court');
                   });
                 } else if (_courtTypes.isNotEmpty) {
                   // If District Court not found, select the first court type
                   setState(() {
                     _selectedCourtType = _courtTypes[0]['court_type'];
                     print(
-                        'TEST 1.9: Default court type set to first available: ${_selectedCourtType}');
+                        'TEST 1.29: Default court type set to first available: ${_selectedCourtType}');
                   });
                 }
               }
             } else {
-              print(
-                  'TEST 1.8: Court types data is not a list: ${courtTypesData.runtimeType}');
+              print('TEST 1.30: Invalid court types data format');
               _courtTypes = [];
             }
           } catch (e) {
-            print('TEST 1.9: Error parsing court types: $e');
+            print('TEST 1.31: Error parsing court types: $e');
+            print('TEST 1.32: Response body: ${courtTypesResponse.body}');
             _courtTypes = [];
           }
         });
-        print('TEST 1.10: State updated successfully');
-        print('TEST 1.11: Court types count: ${_courtTypes.length}');
       } else {
-        print('TEST 1.12: Error: Court types API response failed');
+        print('TEST 1.33: Error: Court types API response failed');
         print(
-            'TEST 1.13: Court types status: ${courtTypesResponse.statusCode}');
+            'TEST 1.34: Court types status: ${courtTypesResponse.statusCode}');
       }
     } catch (e) {
-      print('TEST 1.14: Error fetching dropdown data: $e');
-      print('TEST 1.15: Stack trace: ${StackTrace.current}');
+      print('TEST 1.35: Error fetching dropdown data: $e');
+      print('TEST 1.36: Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -253,64 +344,120 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
         print(
             'TEST 3.4: Token retrieved for form submission: ${token != null ? token.substring(0, 10) : "null"}...');
 
-        // Create form data
+        // Create request body
+        final requestBody = {
+          "cnr": _crnController.text,
+          "case_no": _caseNoController.text,
+          "year":
+              _caseYearController.text.isEmpty ? "" : _caseYearController.text,
+          "state_id": _districtsData
+              .firstWhere(
+                (item) => item['state']['state'] == _selectedState,
+                orElse: () => {
+                  'state': {'id': null}
+                },
+              )['state']['id']
+              ?.toString(),
+          "district_id": _districtsData
+              .firstWhere(
+                (item) => item['district'] == _selectedDistrict,
+                orElse: () => {'id': null},
+              )['id']
+              ?.toString(),
+          "court_type_id": _courtTypes
+              .firstWhere(
+                (type) => type['court_type'] == _selectedCourtType,
+                orElse: () => {'id': null},
+              )['id']
+              ?.toString(),
+          "court_id": _courts
+              .firstWhere(
+                (court) =>
+                    '${court['court_no']} - ${court['court_name']}' ==
+                    _selectedCourt,
+                orElse: () => {'id': null},
+              )['id']
+              ?.toString(),
+          "case_type_id": _caseTypes
+              .firstWhere(
+                (type) => type['case_type'] == _selectedCaseType,
+                orElse: () => {'id': null},
+              )['id']
+              ?.toString(),
+          "under_section": _underSectionController.text,
+          "petitioner": _petitionerController.text,
+          "respondent": _respondentController.text,
+          "client_type": _selectedClientType,
+          "case_stage_id": _stageOfCases
+              .firstWhere(
+                (stage) => stage['stage_of_case'] == _selectedStageOfCase,
+                orElse: () => {'id': null},
+              )['id']
+              ?.toString(),
+          "first_date":
+              DateTime.now().toString().split(' ')[0], // YYYY-MM-DD format
+          "next_date": _nextDateController.text
+              .split('-')
+              .reversed
+              .join('-'), // Convert DD-MM-YYYY to YYYY-MM-DD
+          "fir_no": _firNumberController.text,
+          "fir_year":
+              _firYearController.text.isEmpty ? "" : _firYearController.text,
+          "police_station": _policeStationController.text,
+          "sub_advocate": _subAdvocateController.text,
+          "comments": _commentsController.text,
+          "document": "", // Always include document field with empty string
+        };
+
+        print('TEST 3.5: Request body prepared: $requestBody');
+
+        // Create multipart request
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('${AppConfig.baseUrl}case/'),
+          Uri.parse('${AppConfig.baseUrl}case/add/'),
         );
 
         // Add headers
         request.headers.addAll({
           'Authorization': 'Bearer $token',
         });
-        print('TEST 3.5: Request headers added');
+        print('TEST 3.6: Request headers added');
 
-        // Add text fields
-        final fields = {
-          'crn': _crnController.text,
-          'case_no': _caseNoController.text,
-          'case_year': _caseYearController.text,
-          'state': _stateController.text,
-          'district': _districtController.text,
-          'court_type': _selectedCourtType!,
-          'court': _selectedCourt!,
-          'case_type': _selectedCaseType!,
-          'under_section': _underSectionController.text,
-          'petitioner': _petitionerController.text,
-          'respondent': _respondentController.text,
-          'client_type': _selectedClientType!,
-          'stage_of_case': _selectedStageOfCase!,
-          'fir_number': _firNumberController.text,
-          'fir_year': _firYearController.text,
-          'police_station': _policeStationController.text,
-          'next_date': _nextDateController.text,
-          'sub_advocate': _subAdvocateController.text,
-          'comments': _commentsController.text,
-        };
-        request.fields.addAll(fields);
-        print('TEST 3.6: Form fields added: $fields');
+        // Add fields
+        requestBody.forEach((key, value) {
+          if (value != null) {
+            request.fields[key] = value.toString();
+          }
+        });
+        print('TEST 3.7: Form fields added');
 
         // Add document if selected
         if (_document != null) {
-          print('TEST 3.7: Adding document to request: ${_document!.path}');
+          print('TEST 3.8: Adding document to request: ${_document!.path}');
           request.files.add(
             await http.MultipartFile.fromPath(
               'document',
               _document!.path,
             ),
           );
-          print('TEST 3.8: Document added to request');
+          print('TEST 3.9: Document added to request');
         }
 
         // Send request
-        print('TEST 3.9: Sending request to server...');
+        print('TEST 3.10: Sending request to server...');
         final response = await request.send();
         final responseData = await response.stream.bytesToString();
-        print('TEST 3.10: Response status code: ${response.statusCode}');
-        print('TEST 3.11: Response data: $responseData');
+        print('TEST 3.11: Response status code: ${response.statusCode}');
+        print('TEST 3.12: Response data: $responseData');
 
-        if (response.statusCode == 201) {
-          print('TEST 3.12: Case added successfully');
+        // Parse response data
+        final Map<String, dynamic> responseJson = json.decode(responseData);
+        final int status = responseJson['status'] ?? 0;
+        final String message =
+            responseJson['message'] ?? 'Unknown error occurred';
+
+        if (status == 200) {
+          print('TEST 3.13: Case added successfully');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -318,21 +465,39 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            Navigator.pop(context, true);
-            print('TEST 3.13: Navigated back to previous screen');
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(
+                  userData: widget.userData,
+                  cases: const [],
+                  count: widget.count,
+                ),
+              ),
+            );
+            print('TEST 3.14: Navigated to home screen');
           }
         } else {
-          print('TEST 3.14: Failed to add case: ${response.statusCode}');
-          throw Exception('Failed to add case: ${response.statusCode}');
+          print('TEST 3.15: Failed to add case: $status - $message');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to add case: $message'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
         }
       } catch (e) {
-        print('TEST 3.15: Error submitting form: $e');
-        print('TEST 3.16: Stack trace: ${StackTrace.current}');
+        print('TEST 3.16: Error submitting form: $e');
+        print('TEST 3.17: Stack trace: ${StackTrace.current}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error adding case: $e'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
@@ -341,11 +506,198 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
           setState(() {
             isLoading = false;
           });
-          print('TEST 3.17: Loading state set to false');
+          print('TEST 3.18: Loading state set to false');
         }
       }
     } else {
-      print('TEST 3.18: Form validation failed');
+      print('TEST 3.19: Form validation failed');
+    }
+  }
+
+  Future<void> _loadDistricts() async {
+    try {
+      print('\n=== Loading Districts Data ===');
+      print('Test 1: Getting districts from API');
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}getdistrict/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('Test 2: Districts data received successfully');
+        setState(() {
+          _districtsData =
+              List<Map<String, dynamic>>.from(json.decode(response.body));
+          _uniqueStates = _districtsData
+              .map((item) => item['state']['state'] as String)
+              .toSet()
+              .toList()
+            ..sort();
+          print('Available states: $_uniqueStates');
+
+          // Get user data state and district
+          final userData = widget.userData;
+          print('Test 3: User data state and district');
+          if (userData['user_state'] != null) {
+            final stateData = userData['user_state'] as Map<String, dynamic>;
+            final userState = stateData['state'] as String;
+            print('User state from data: $userState');
+
+            // Check if user state exists in available states
+            if (_uniqueStates.contains(userState)) {
+              print('User state found in available states');
+              _selectedState = userState;
+              _updateDistricts(_selectedState!);
+
+              // Set district if available
+              if (userData['user_district'] != null) {
+                final districtData =
+                    userData['user_district'] as Map<String, dynamic>;
+                final userDistrict = districtData['district'] as String;
+                print('User district from data: $userDistrict');
+
+                // Check if user district exists in filtered districts
+                if (_filteredDistricts.contains(userDistrict)) {
+                  print('User district found in filtered districts');
+                  _selectedDistrict = userDistrict;
+                  // Fetch courts for the selected district
+                  _fetchCourts(userDistrict);
+                } else {
+                  print('User district not found in filtered districts');
+                }
+              }
+            } else {
+              print('User state not found in available states');
+              // Fallback to first state if user state not found
+              if (_uniqueStates.isNotEmpty) {
+                _selectedState = _uniqueStates.first;
+                _updateDistricts(_selectedState!);
+                if (_filteredDistricts.isNotEmpty) {
+                  _selectedDistrict = _filteredDistricts.first;
+                  // Fetch courts for the selected district
+                  _fetchCourts(_filteredDistricts.first);
+                }
+              }
+            }
+          } else {
+            print('No user state data available');
+            // Fallback to first state if no user data
+            if (_uniqueStates.isNotEmpty) {
+              _selectedState = _uniqueStates.first;
+              _updateDistricts(_selectedState!);
+              if (_filteredDistricts.isNotEmpty) {
+                _selectedDistrict = _filteredDistricts.first;
+                // Fetch courts for the selected district
+                _fetchCourts(_filteredDistricts.first);
+              }
+            }
+          }
+
+          print('Final selected state: $_selectedState');
+          print('Final selected district: $_selectedDistrict');
+        });
+      } else {
+        print('Failed to load districts data');
+      }
+    } catch (e) {
+      print('Error loading districts: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading districts: $e')),
+        );
+      }
+    }
+  }
+
+  void _updateDistricts(String state) {
+    print('Updating districts for state: $state');
+    setState(() {
+      _filteredDistricts = _districtsData
+          .where((item) => item['state']['state'] == state)
+          .map((item) => item['district'] as String)
+          .toList()
+        ..sort();
+      print('Filtered districts: $_filteredDistricts');
+
+      // Reset selected district when state changes
+      _selectedDistrict = null;
+      // Reset courts when district changes
+      _courts = [];
+      _selectedCourt = null;
+    });
+  }
+
+  Future<void> _fetchCourts(String district) async {
+    try {
+      print('TEST 1: Starting to fetch courts for district: $district');
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+      print('TEST 1.1: Token retrieved successfully');
+
+      // Find district ID
+      final districtData = _districtsData.firstWhere(
+        (item) => item['district'] == district,
+        orElse: () => {'id': null},
+      );
+
+      if (districtData['id'] == null) {
+        print('TEST 1.2: District ID not found');
+        return;
+      }
+
+      print('TEST 1.3: District ID found: ${districtData['id']}');
+
+      // Call getcourt/ API
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}getcourt/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'district_id': districtData['id'],
+        }),
+      );
+
+      print('TEST 1.4: Courts response status: ${response.statusCode}');
+      print('TEST 1.5: Courts response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('TEST 1.6: Courts API response successful');
+        setState(() {
+          try {
+            final responseData = json.decode(response.body);
+            if (responseData['status'] == 200 &&
+                responseData['payload'] is List) {
+              _courts =
+                  List<Map<String, dynamic>>.from(responseData['payload']);
+              print(
+                  'TEST 1.7: Courts parsed successfully: ${_courts.length} items');
+              if (_courts.isNotEmpty) {
+                print('TEST 1.8: First court: ${_courts[0]}');
+              }
+            } else {
+              print('TEST 1.9: Invalid courts data format');
+              _courts = [];
+            }
+          } catch (e) {
+            print('TEST 1.10: Error parsing courts: $e');
+            _courts = [];
+          }
+        });
+      } else {
+        print('TEST 1.11: Error: Courts API response failed');
+        print('TEST 1.12: Courts status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('TEST 1.13: Error fetching courts: $e');
+      print('TEST 1.14: Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -364,139 +716,188 @@ class _AddCaseScreenState extends State<AddCaseScreen> {
         backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
         elevation: 0,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Basic Information
-                    _buildSectionTitle('Basic Information'),
-                    _buildTextField(
-                        _crnController, 'CRN Number', 'Enter CRN number',
-                        isRequired: false),
-                    _buildTextField(
-                        _caseNoController, 'Case Number', 'Enter case number',
-                        isRequired: false),
-                    _buildYearDropdown(_caseYearController, 'Case Year'),
-
-                    // Location Information
-                    _buildSectionTitle('Location Information'),
-                    _buildTextField(_stateController, 'State', 'Enter state'),
-                    _buildTextField(
-                        _districtController, 'District', 'Enter district'),
-                    _buildDropdown(
-                      'Court Type',
-                      _courtTypes
-                          .map((type) => type['court_type'] as String)
-                          .toList(),
-                      _selectedCourtType,
-                      (value) => setState(() => _selectedCourtType = value),
+      body: isInitialLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color.fromRGBO(123, 109, 217, 1),
                     ),
-                    _buildDropdown(
-                      'Court',
-                      _courts
-                          .map((court) => court['court_name'] as String)
-                          .toList(),
-                      _selectedCourt,
-                      (value) => setState(() => _selectedCourt = value),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
                     ),
-
-                    // Case Details
-                    _buildSectionTitle('Case Details'),
-                    _buildDropdown(
-                      'Case Type',
-                      _caseTypes
-                          .map((type) => type['case_type'] as String)
-                          .toList(),
-                      _selectedCaseType,
-                      (value) => setState(() => _selectedCaseType = value),
-                    ),
-                    _buildTextField(_underSectionController, 'Under Section',
-                        'Enter section',
-                        isRequired: false),
-
-                    // Parties
-                    _buildSectionTitle('Parties'),
-                    _buildTextField(_petitionerController, 'Petitioner',
-                        'Enter petitioner name'),
-                    _buildTextField(_respondentController, 'Respondent',
-                        'Enter respondent name'),
-                    _buildDropdown(
-                      'Client Type',
-                      ['Petitioner', 'Respondent'],
-                      _selectedClientType,
-                      (value) => setState(() => _selectedClientType = value),
-                    ),
-
-                    // Case Progress
-                    _buildSectionTitle('Case Progress'),
-                    _buildDropdown(
-                      'Stage of Case',
-                      _stageOfCases
-                          .map((stage) => stage['stage_of_case'] as String)
-                          .toList(),
-                      _selectedStageOfCase,
-                      (value) => setState(() => _selectedStageOfCase = value),
-                    ),
-
-                    // FIR Details
-                    _buildSectionTitle('FIR Details'),
-                    _buildTextField(
-                        _firNumberController, 'FIR Number', 'Enter FIR number',
-                        isRequired: false),
-                    _buildYearDropdown(_firYearController, 'FIR Year',
-                        isRequired: false),
-                    _buildTextField(_policeStationController, 'Police Station',
-                        'Enter police station',
-                        isRequired: false),
-
-                    // Dates
-                    _buildSectionTitle('Important Dates'),
-                    _buildDateField(_nextDateController, 'Next Date',
-                        validator: _validateNextDate),
-
-                    // Additional Information
-                    _buildSectionTitle('Additional Information'),
-                    _buildTextField(_subAdvocateController, 'Sub Advocate',
-                        'Enter sub advocate name',
-                        isRequired: false),
-                    _buildTextField(
-                        _commentsController, 'Comments', 'Enter comments',
-                        maxLines: 3, isRequired: false),
-
-                    // Document Upload
-                    _buildSectionTitle('Document'),
-                    _buildDocumentUpload(),
-
-                    const SizedBox(height: 20),
-
-                    // Submit Button
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Add Case',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
+            )
+          : isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Basic Information
+                        _buildSectionTitle('Basic Information'),
+                        _buildTextField(
+                            _crnController, 'CRN Number', 'Enter CRN number',
+                            isRequired: false),
+                        _buildTextField(_caseNoController, 'Case Number',
+                            'Enter case number',
+                            isRequired: false),
+                        _buildYearDropdown(_caseYearController, 'Case Year',
+                            isRequired: false),
+
+                        // Location Information
+                        _buildSectionTitle('Location Information'),
+                        _buildDropdown(
+                          'State',
+                          _uniqueStates,
+                          _selectedState,
+                          (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedState = value;
+                                _updateDistricts(value);
+                              });
+                            }
+                          },
+                        ),
+                        _buildDropdown(
+                          'District',
+                          _filteredDistricts,
+                          _selectedDistrict,
+                          (value) {
+                            setState(() {
+                              _selectedDistrict = value;
+                              if (value != null) {
+                                _fetchCourts(value);
+                              }
+                            });
+                          },
+                        ),
+                        _buildDropdown(
+                          'Court Type',
+                          _courtTypes
+                              .map((type) => type['court_type'] as String)
+                              .toList(),
+                          _selectedCourtType,
+                          (value) => setState(() => _selectedCourtType = value),
+                        ),
+                        _buildDropdown(
+                          'Court',
+                          _courts
+                              .map((court) =>
+                                  '${court['court_no']} - ${court['court_name']}')
+                              .toList(),
+                          _selectedCourt,
+                          (value) => setState(() => _selectedCourt = value),
+                        ),
+
+                        // Case Details
+                        _buildSectionTitle('Case Details'),
+                        _buildDropdown(
+                          'Case Type',
+                          _caseTypes
+                              .map((type) => type['case_type'] as String)
+                              .toList(),
+                          _selectedCaseType,
+                          (value) => setState(() => _selectedCaseType = value),
+                        ),
+                        _buildTextField(_underSectionController,
+                            'Under Section', 'Enter section',
+                            isRequired: false),
+
+                        // Parties
+                        _buildSectionTitle('Parties'),
+                        _buildTextField(_petitionerController, 'Petitioner',
+                            'Enter petitioner name'),
+                        _buildTextField(_respondentController, 'Respondent',
+                            'Enter respondent name'),
+                        _buildDropdown(
+                          'Client Type',
+                          ['Petitioner', 'Respondent'],
+                          _selectedClientType,
+                          (value) =>
+                              setState(() => _selectedClientType = value),
+                        ),
+
+                        // Case Progress
+                        _buildSectionTitle('Case Progress'),
+                        _buildDropdown(
+                          'Stage of Case',
+                          _stageOfCases
+                              .map((stage) => stage['stage_of_case'] as String)
+                              .toList(),
+                          _selectedStageOfCase,
+                          (value) =>
+                              setState(() => _selectedStageOfCase = value),
+                        ),
+
+                        // FIR Details
+                        _buildSectionTitle('FIR Details'),
+                        _buildTextField(_firNumberController, 'FIR Number',
+                            'Enter FIR number',
+                            isRequired: false),
+                        _buildYearDropdown(_firYearController, 'FIR Year',
+                            isRequired: false),
+                        _buildTextField(_policeStationController,
+                            'Police Station', 'Enter police station',
+                            isRequired: false),
+
+                        // Dates
+                        _buildSectionTitle('Important Dates'),
+                        _buildDateField(_nextDateController, 'Next Date',
+                            validator: _validateNextDate),
+
+                        // Additional Information
+                        _buildSectionTitle('Additional Information'),
+                        _buildTextField(_subAdvocateController, 'Sub Advocate',
+                            'Enter sub advocate name',
+                            isRequired: false),
+                        _buildTextField(
+                            _commentsController, 'Comments', 'Enter comments',
+                            maxLines: 3, isRequired: false),
+
+                        // Document Upload
+                        _buildSectionTitle('Document'),
+                        _buildDocumentUpload(),
+
+                        const SizedBox(height: 20),
+
+                        // Submit Button
+                        ElevatedButton(
+                          onPressed: _submitForm,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromRGBO(123, 109, 217, 1),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Add Case',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
     );
   }
 

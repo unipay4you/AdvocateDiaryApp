@@ -693,15 +693,29 @@ class HomeScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         print('Test 17.1: Add New Case button pressed');
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddCaseScreen(
-                              userData: userData,
-                              count: count,
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color.fromRGBO(123, 109, 217, 1),
+                              ),
                             ),
                           ),
                         );
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          Navigator.pop(context); // Remove loading dialog
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddCaseScreen(
+                                userData: userData,
+                                count: count,
+                              ),
+                            ),
+                          );
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
@@ -790,74 +804,74 @@ class HomeScreen extends StatelessWidget {
                       );
                     },
                     child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: item['gradient'],
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: item['gradient'],
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
                       ),
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color.fromRGBO(123, 109, 217, 1),
-                            shape: BoxShape.circle,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(123, 109, 217, 1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              item['icon'],
+                              color: Colors.white,
+                              size: 30,
+                            ),
                           ),
-                          child: Icon(
-                            item['icon'],
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          item['title'],
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item['subtitle'],
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${item['count']} cases',
+                          const SizedBox(height: 12),
+                          Text(
+                            item['title'],
                             style: const TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item['subtitle'],
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.7),
+                              fontSize: 12,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${item['count']} cases',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -986,132 +1000,132 @@ class HomeScreen extends StatelessWidget {
                                   print(
                                       '=== End Navigation to Case Detail ===\n');
                                 },
-                              child: Padding(
+                                child: Padding(
                                   padding: const EdgeInsets.all(12),
-                                child: Row(
+                                  child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color.fromRGBO(
-                                            123, 109, 217, 1),
-                                        shape: BoxShape.circle,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color.fromRGBO(
+                                              123, 109, 217, 1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.gavel,
+                                            color: Colors.white, size: 20),
                                       ),
-                                      child: const Icon(Icons.gavel,
-                                          color: Colors.white, size: 20),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
                                                     caseData['petitioner'] ??
                                                         '',
-                                                  style: petitionerStyle,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                    style: petitionerStyle,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
                                                 ),
-                                              ),
                                                 const Padding(
                                                   padding: EdgeInsets.symmetric(
                                                       horizontal: 8),
                                                   child: Text('vs'),
                                                 ),
-                                              Expanded(
-                                                child: Text(
+                                                Expanded(
+                                                  child: Text(
                                                     caseData['respondent'] ??
                                                         '',
-                                                  style: respondentStyle,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                    style: respondentStyle,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '#${caseData['case_no']}/${caseData['case_year']}',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey,
+                                              ],
                                             ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'Court No: ${caseData['court_no']}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              '#${caseData['case_no']}/${caseData['case_year']}',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey,
                                               ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Court No: ${caseData['court_no']}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                                 const SizedBox(width: 16),
-                                              Text(
-                                                'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
+                                                Text(
+                                                  'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            caseData['stage_of_case']
-                                                    ['stage_of_case'] ??
-                                                '',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.blue,
-                                              fontWeight: FontWeight.w500,
+                                              ],
                                             ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisAlignment:
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              caseData['stage_of_case']
+                                                      ['stage_of_case'] ??
+                                                  '',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.blue,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              mainAxisAlignment:
                                                   MainAxisAlignment
                                                       .spaceBetween,
-                                            children: [
-                                              Text(
-                                                'Last: ${caseData['last_date'] ?? 'N/A'}',
-                                                style: const TextStyle(
+                                              children: [
+                                                Text(
+                                                  'Last: ${caseData['last_date'] ?? 'N/A'}',
+                                                  style: const TextStyle(
                                                     fontSize: 14,
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.bold,
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
-                                              ),
                                                 GestureDetector(
                                                   onTap: () {
                                                     _showNextDateUpdateDialog(
                                                         context, caseData);
                                                   },
                                                   child: Text(
-                                                'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                style: const TextStyle(
+                                                    'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                    style: const TextStyle(
                                                       fontSize: 14,
-                                                  color: Colors.black87,
+                                                      color: Colors.black87,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
                                   ),
                                 ),
                               ),
