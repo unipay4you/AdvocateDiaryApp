@@ -9,6 +9,7 @@ import 'dart:convert';
 import '../utils/date_update_dialog.dart';
 import 'filtered_cases_screen.dart';
 import 'add_case_screen.dart';
+import 'profile_update_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -474,7 +475,15 @@ class HomeScreen extends StatelessWidget {
                   const Text('Profile', style: TextStyle(color: Colors.black)),
               onTap: () {
                 print('Test 10: Profile menu item tapped');
-                // TODO: Navigate to profile
+                Navigator.pop(context); // Close drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileUpdateScreen(
+                      userData: userData,
+                    ),
+                  ),
+                );
               },
             ),
             ListTile(
@@ -499,7 +508,39 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          try {
+            print('\n=== Starting Pull to Refresh ===');
+            final freshData = await _fetchFreshData();
+            print('Test 1: Fresh data received successfully');
+            if (context.mounted) {
+              print('Test 2: Navigating to new HomeScreen with fresh data');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomeScreen(
+                    userData: freshData['userData'],
+                    cases: freshData['cases'],
+                    count: freshData['count'],
+                  ),
+                ),
+              );
+            }
+          } catch (e) {
+            print('Test 3: Error refreshing data: $e');
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error refreshing data: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -663,7 +704,8 @@ class HomeScreen extends StatelessWidget {
                         child: IconButton(
                           icon: Icon(button['icon'], color: Colors.white),
                           onPressed: () {
-                            print('Test 15: ${button['label']} button pressed');
+                              print(
+                                  'Test 15: ${button['label']} button pressed');
                             // TODO: Implement button action
                           },
                         ),
@@ -684,81 +726,83 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Add New Case and Daily List Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        print('Test 17.1: Add New Case button pressed');
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (context) => const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color.fromRGBO(123, 109, 217, 1),
-                              ),
-                            ),
-                          ),
-                        );
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          Navigator.pop(context); // Remove loading dialog
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AddCaseScreen(
-                                userData: userData,
-                                count: count,
+              // Add New Case and Daily List Buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          print('Test 17.1: Add New Case button pressed');
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color.fromRGBO(123, 109, 217, 1),
+                                ),
                               ),
                             ),
                           );
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          Future.delayed(const Duration(milliseconds: 100), () {
+                            Navigator.pop(context); // Remove loading dialog
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddCaseScreen(
+                                  userData: userData,
+                                  count: count,
+                                ),
+                              ),
+                            );
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromRGBO(123, 109, 217, 1),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Add New Case',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        print('Test 17.2: Daily List button pressed');
-                        // TODO: Navigate to daily list screen
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Daily List',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        child: const Text(
+                          'Add New Case',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          print('Test 17.2: Daily List button pressed');
+                          // TODO: Navigate to daily list screen
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromRGBO(123, 109, 217, 1),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Daily List',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
               ),
             ),
             const SizedBox(height: 20),
@@ -775,104 +819,104 @@ class HomeScreen extends StatelessWidget {
                 children: caseContainers.map((item) {
                   print(
                       'Test 16: Building case container for ${item['title']}');
-                  return InkWell(
-                    onTap: () {
-                      String filter = '';
-                      switch (item['title']) {
-                        case "Today's Cases":
-                          filter = 'today';
-                          break;
-                        case 'Tomorrow Cases':
-                          filter = 'tommarow';
-                          break;
-                        case 'Date Awaited Case':
-                          filter = 'date_awaited';
-                          break;
-                        case 'All Cases':
-                          filter = '';
-                          break;
-                      }
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FilteredCasesScreen(
-                            filter: filter,
-                            userData: userData,
-                            count: count,
+                    return InkWell(
+                      onTap: () {
+                        String filter = '';
+                        switch (item['title']) {
+                          case "Today's Cases":
+                            filter = 'today';
+                            break;
+                          case 'Tomorrow Cases':
+                            filter = 'tommarow';
+                            break;
+                          case 'Date Awaited Case':
+                            filter = 'date_awaited';
+                            break;
+                          case 'All Cases':
+                            filter = '';
+                            break;
+                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FilteredCasesScreen(
+                              filter: filter,
+                              userData: userData,
+                              count: count,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: item['gradient'],
-                        ),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
+                        );
+                      },
+                      child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: item['gradient'],
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color.fromRGBO(123, 109, 217, 1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              item['icon'],
-                              color: Colors.white,
-                              size: 30,
-                            ),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color.fromRGBO(123, 109, 217, 1),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            item['title'],
+                          child: Icon(
+                            item['icon'],
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          item['title'],
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item['subtitle'],
+                          style: TextStyle(
+                            color: Colors.black.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${item['count']} cases',
                             style: const TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['subtitle'],
-                            style: TextStyle(
-                              color: Colors.black.withOpacity(0.7),
-                              fontSize: 12,
+                              fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${item['count']} cases',
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                        ),
                     ),
                   );
                 }).toList(),
@@ -912,8 +956,9 @@ class HomeScreen extends StatelessWidget {
                         final index = entry.key;
                         final caseData = entry.value;
                         // Determine which party should be bold based on client_type
-                        final isPetitioner =
-                            caseData['client_type']?.toString().toLowerCase() ==
+                          final isPetitioner = caseData['client_type']
+                                  ?.toString()
+                                  .toLowerCase() ==
                                 'petitioner';
                         final petitionerStyle = TextStyle(
                           fontWeight: isPetitioner
@@ -935,203 +980,208 @@ class HomeScreen extends StatelessWidget {
                               margin: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                  color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: InkWell(
-                                onTap: () {
-                                  print(
-                                      '\n=== Starting Navigation to Case Detail ===');
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CaseDetailScreen(
-                                        caseData: caseData,
-                                        cases: cases,
-                                        userData: userData,
-                                        count: count,
-                                      ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
                                     ),
-                                  ).then((_) async {
+                                  ],
+                                ),
+                                child: InkWell(
+                                  onTap: () {
                                     print(
-                                        'Test 1: Returned from CaseDetailScreen');
-                                    try {
-                                      print(
-                                          'Test 2: Starting fresh data fetch');
-                                      final freshData = await _fetchFreshData();
-                                      print(
-                                          'Test 3: Fresh data received successfully');
-                                      if (context.mounted) {
-                                        print(
-                                            'Test 4: Navigating to new HomeScreen with fresh data');
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => HomeScreen(
-                                              userData: freshData['userData'],
-                                              cases: freshData['cases'],
-                                              count: freshData['count'],
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      print(
-                                          'Test 5: Error refreshing data: $e');
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Error refreshing data: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  });
-                                  print(
-                                      '=== End Navigation to Case Detail ===\n');
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: const Color.fromRGBO(
-                                              123, 109, 217, 1),
-                                          shape: BoxShape.circle,
+                                        '\n=== Starting Navigation to Case Detail ===');
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CaseDetailScreen(
+                                          caseData: caseData,
+                                          cases: cases,
+                                          userData: userData,
+                                          count: count,
                                         ),
-                                        child: const Icon(Icons.gavel,
-                                            color: Colors.white, size: 20),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    caseData['petitioner'] ??
-                                                        '',
-                                                    style: petitionerStyle,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                const Padding(
-                                                  padding: EdgeInsets.symmetric(
-                                                      horizontal: 8),
-                                                  child: Text('vs'),
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    caseData['respondent'] ??
-                                                        '',
-                                                    style: respondentStyle,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              '#${caseData['case_no']}/${caseData['case_year']}',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey,
+                                    ).then((_) async {
+                                      print(
+                                          'Test 1: Returned from CaseDetailScreen');
+                                      try {
+                                        print(
+                                            'Test 2: Starting fresh data fetch');
+                                        final freshData =
+                                            await _fetchFreshData();
+                                        print(
+                                            'Test 3: Fresh data received successfully');
+                                        if (context.mounted) {
+                                          print(
+                                              'Test 4: Navigating to new HomeScreen with fresh data');
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => HomeScreen(
+                                                userData: freshData['userData'],
+                                                cases: freshData['cases'],
+                                                count: freshData['count'],
                                               ),
                                             ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  'Court No: ${caseData['court_no']}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.black87,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 16),
-                                                Text(
-                                                  'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.black87,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
+                                          );
+                                        }
+                                      } catch (e) {
+                                        print(
+                                            'Test 5: Error refreshing data: $e');
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Error refreshing data: $e'),
+                                              backgroundColor: Colors.red,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              caseData['stage_of_case']
-                                                      ['stage_of_case'] ??
-                                                  '',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.blue,
-                                                fontWeight: FontWeight.w500,
+                                          );
+                                        }
+                                      }
+                                    });
+                                    print(
+                                        '=== End Navigation to Case Detail ===\n');
+                                  },
+                              child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromRGBO(
+                                            123, 109, 217, 1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.gavel,
+                                          color: Colors.white, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                      caseData['petitioner'] ??
+                                                          '',
+                                                  style: petitionerStyle,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  'Last: ${caseData['last_date'] ?? 'N/A'}',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.black87,
-                                                    fontWeight: FontWeight.bold,
+                                                  const Padding(
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 8),
+                                                    child: Text('vs'),
                                                   ),
+                                              Expanded(
+                                                child: Text(
+                                                      caseData['respondent'] ??
+                                                          '',
+                                                  style: respondentStyle,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    _showNextDateUpdateDialog(
-                                                        context, caseData);
-                                                  },
-                                                  child: Text(
-                                                    'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                    style: const TextStyle(
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            '#${caseData['case_no']}/${caseData['case_year']}',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Court No: ${caseData['court_no']}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.black87,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                ),
+                                              ),
+                                                  const SizedBox(width: 16),
+                                              Text(
+                                                'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.black87,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            caseData['stage_of_case']
+                                                    ['stage_of_case'] ??
+                                                '',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Last: ${caseData['last_date'] ?? 'N/A'}',
+                                                style: const TextStyle(
                                                       fontSize: 14,
-                                                      color: Colors.black87,
+                                                  color: Colors.black87,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
                                                   ),
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      _showNextDateUpdateDialog(
+                                                          context, caseData);
+                                                    },
+                                                    child: Text(
+                                                'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                style: const TextStyle(
+                                                        fontSize: 14,
+                                                  color: Colors.black87,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
                                                 ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
+                                    ),
                                 ),
                               ),
                             ),
                             if (index < cases.length - 1)
-                              const SizedBox(height: 4),
+                                const SizedBox(height: 4),
                           ],
                         );
                       }).toList(),
@@ -1142,6 +1192,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

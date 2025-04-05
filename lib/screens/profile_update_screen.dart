@@ -3,6 +3,8 @@ import '../services/api_service.dart';
 import '../models/user_model.dart';
 import '../config/app_config.dart';
 import '../screens/login_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ProfileUpdateScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -19,6 +21,8 @@ class ProfileUpdateScreen extends StatefulWidget {
 class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _apiService = ApiService();
+  final _imagePicker = ImagePicker();
+  File? _selectedImage;
   bool _isLoading = false;
   String? _selectedState;
   String? _selectedDistrict;
@@ -261,7 +265,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     });
 
     try {
-      final userData = {
+      final Map<String, dynamic> userData = {
         'phone_number': _phoneController.text,
         'email': _emailController.text,
         'user_name': _nameController.text,
@@ -274,6 +278,15 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         'user_state': _selectedState,
         'user_district': _selectedDistrict,
       };
+
+      // Handle profile image
+      if (_selectedImage != null) {
+        // If a new image is selected, send the File object
+        userData['user_profile_image'] = _selectedImage;
+      } else if (widget.userData['user_profile_image'] != null) {
+        // If no new image is selected but there's an existing image, keep the existing image path
+        userData['user_profile_image'] = widget.userData['user_profile_image'];
+      }
 
       final response = await _apiService.updateProfile(userData);
 
@@ -364,6 +377,28 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 50,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
       }
     }
   }
@@ -462,11 +497,14 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                         children: [
                           CircleAvatar(
                             radius: 50,
-                            backgroundImage: _apiService.userProfileImage !=
-                                    null
-                                ? NetworkImage(_apiService.userProfileImage!)
-                                : null,
-                            child: _apiService.userProfileImage == null
+                            backgroundImage: _selectedImage != null
+                                ? FileImage(_selectedImage!)
+                                : (_apiService.userProfileImage != null
+                                    ? NetworkImage(
+                                        _apiService.userProfileImage!)
+                                    : null) as ImageProvider?,
+                            child: _selectedImage == null &&
+                                    _apiService.userProfileImage == null
                                 ? const Icon(Icons.person, size: 50)
                                 : null,
                           ),
@@ -478,9 +516,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                               radius: 18,
                               child: IconButton(
                                 icon: const Icon(Icons.camera_alt, size: 18),
-                                onPressed: () {
-                                  // TODO: Implement image picker
-                                },
+                                onPressed: _pickImage,
                               ),
                             ),
                           ),

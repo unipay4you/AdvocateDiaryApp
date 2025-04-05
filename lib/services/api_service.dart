@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/app_config.dart';
 
@@ -306,11 +307,9 @@ class ApiService {
       Map<String, dynamic> userData) async {
     try {
       print('\n=== Starting Profile Update ===');
-      print('Test 1: Preparing request body');
-
-      // Get access token
-      final token = await _storage.read(key: 'access_token');
-      if (token == null) {
+      print('Test 1: Getting access token');
+      final accessToken = await _storage.read(key: 'access_token');
+      if (accessToken == null) {
         throw Exception('No access token found');
       }
 
@@ -346,101 +345,85 @@ class ApiService {
 
       print('State ID: $stateId, District ID: $districtId');
 
-      // Convert date format from DD MMM YYYY to YYYY-MM-DD
-      String formattedDate = userData['user_dob'];
-      if (formattedDate.isNotEmpty) {
-        try {
-          final months = {
-            'Jan': '01',
-            'Feb': '02',
-            'Mar': '03',
-            'Apr': '04',
-            'May': '05',
-            'Jun': '06',
-            'Jul': '07',
-            'Aug': '08',
-            'Sep': '09',
-            'Oct': '10',
-            'Nov': '11',
-            'Dec': '12'
-          };
-
-          final parts = formattedDate.split(' ');
-          if (parts.length == 3) {
-            final day = parts[0].padLeft(2, '0');
-            final month = months[parts[1]];
-            final year = parts[2];
-
-            if (month != null) {
-              formattedDate = '$year-$month-$day';
-              print('Converted date format: $formattedDate');
-            }
-          }
-        } catch (e) {
-          print('Error converting date format: $e');
-        }
-      }
-
-      // Prepare request body
-      final requestBody = {
-        "id": userInfo['id'],
-        "user_profile_image": userData['user_profile_image'] ?? "",
-        "email": userData['email'],
-        "phone_number": userData['phone_number'],
-        "user_name": userData['user_name'],
-        "user_dob": formattedDate,
-        "user_address1": userData['user_address1'],
-        "user_address2": userData['user_address2'],
-        "user_address3": userData['user_address3'],
-        "user_district_pincode": userData['user_district_pincode'],
-        "advocate_registration_number":
-            userData['advocate_registration_number'],
-        "user_state": stateId,
-        "user_district": districtId
-      };
-
-      print('Test 4: Request Body:');
-      print(requestBody);
-      print('Test 5: Access Token: $token');
-
-      print('Test 6: Making API call');
-      final response = await http.post(
+      print('Test 4: Creating multipart request');
+      final request = http.MultipartRequest(
+        'POST',
         Uri.parse('${AppConfig.baseUrl}user/update/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(requestBody),
       );
 
-      print('Test 7: Response Status: ${response.statusCode}');
-      print('Test 8: Response Body: ${response.body}');
+      // Add headers
+      request.headers['Authorization'] = 'Bearer $accessToken';
 
-      final responseData = jsonDecode(response.body);
+      // Add user ID to request fields
+      request.fields['id'] = userInfo['id'].toString();
 
-      if (response.statusCode == 200) {
-        print('Test 9: Profile update successful');
-        return {
-          'status': 200,
-          'message': responseData['message'] ?? 'Profile updated successfully',
-        };
-      } else {
-        print('Test 10: Profile update failed');
-        return {
-          'status': response.statusCode,
-          'message': responseData['message'] ?? 'Failed to update profile',
-        };
+      // Add all text fields
+      userData.forEach((key, value) {
+        if (value != null &&
+            key != 'user_profile_image' &&
+            key != 'user_state' &&
+            key != 'user_district') {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // Add state and district IDs
+      if (stateId != null) {
+        request.fields['user_state'] = stateId;
       }
-    } catch (e, stackTrace) {
-      print('\n=== Error in updateProfile ===');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('================\n');
+      if (districtId != null) {
+        request.fields['user_district'] = districtId;
+      }
 
-      return {
-        'status': 500,
-        'message': e.toString(),
-      };
+      // Print request body details
+      print('\n=== Profile Update Request Body ===');
+      print('Text Fields:');
+      request.fields.forEach((key, value) {
+        print('  $key: $value');
+      });
+
+      // Add image file if present
+      if (userData['user_profile_image'] != null) {
+        if (userData['user_profile_image'] is File) {
+          print('Test 5: Adding new image file to request');
+          final file = userData['user_profile_image'] as File;
+          print('Image File Details:');
+          print('  Path: ${file.path}');
+          print('  Size: ${file.lengthSync()} bytes');
+
+          // Add the file to the request
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'user_profile_image',
+              file.path,
+              contentType: MediaType('image', 'jpeg'),
+            ),
+          );
+        } else {
+          // If it's not a File, it's the existing image path
+          print('Test 5: Using existing image path');
+          request.fields['user_profile_image'] =
+              userData['user_profile_image'].toString();
+        }
+      } else {
+        print('No image file selected');
+      }
+      print('================================\n');
+
+      print('Test 6: Sending request');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('Test 7: Response status: ${response.statusCode}');
+      print('Test 8: Response body: ${response.body}');
+
+      final responseData = json.decode(response.body);
+      return responseData;
+    } catch (e) {
+      print('\n=== Error in Profile Update ===');
+      print('Error: $e');
+      print('================\n');
+      rethrow;
     }
   }
 

@@ -146,15 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
     print('Test 1: Preparing navigation');
 
     try {
-      print('Test 2: Fetching user data and cases');
+      print('Test 2: Fetching user data');
       final userResponse = await _apiService.getUserData();
-      final casesResponse = await _apiService.getCases();
 
-      if (userResponse['status'] == 200 && casesResponse['status'] == 200) {
+      if (userResponse['status'] == 200) {
         print('Test 3: Data fetched successfully');
         final userData = userResponse['userData'][0];
-        final cases = casesResponse['cases'];
-        final count = casesResponse['count'];
+        final cases = userResponse['cases'];
+        final count = userResponse['count'];
 
         // Pre-build the home screen with data
         final homeScreen = HomeScreen(
