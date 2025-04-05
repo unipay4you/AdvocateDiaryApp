@@ -11,15 +11,24 @@ Future<void> showDateUpdateDialog(
   Map<String, dynamic> userData,
   Map<String, dynamic> count,
 ) async {
+  print('\n=== Starting Date Update Dialog ===');
+  print('Test 1: Initializing dialog with case data');
+  print('Case ID: ${caseData['id']}');
+  print('Next Date: ${caseData['next_date']}');
+  print('Stage: ${caseData['stage_of_case']}');
+
   // Parse the next date from caseData, default to current date if null
   final nextDateStr = caseData['next_date'] ?? DateTime.now().toIso8601String();
   DateTime selectedDate = DateTime.parse(nextDateStr);
   String? selectedStage = caseData['stage_of_case']['id'].toString();
   final TextEditingController commentsController = TextEditingController();
 
+  print('Test 2: Fetching stages from API');
   // Fetch stages
   final apiService = ApiService();
   final token = await apiService.getAccessToken();
+  print('Access Token: ${token != null ? 'Present' : 'Missing'}');
+
   final stagesResponse = await http.get(
     Uri.parse('${AppConfig.baseUrl}case/stage/'),
     headers: {
@@ -27,6 +36,9 @@ Future<void> showDateUpdateDialog(
       'Content-Type': 'application/json',
     },
   );
+
+  print('Stages API Response Status: ${stagesResponse.statusCode}');
+  print('Stages API Response Body: ${stagesResponse.body}');
 
   List<Map<String, dynamic>> stages = [];
   if (stagesResponse.statusCode == 200) {
@@ -37,9 +49,14 @@ Future<void> showDateUpdateDialog(
               'stage_of_case': stage['stage_of_case'],
             })
         .toList();
+    print('Test 3: Successfully parsed ${stages.length} stages');
+  } else {
+    print(
+        'Error: Failed to fetch stages. Status: ${stagesResponse.statusCode}');
   }
 
   if (context.mounted) {
+    print('Test 4: Showing dialog');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -75,12 +92,24 @@ Future<void> showDateUpdateDialog(
                         ),
                         const SizedBox(height: 4),
                         // Case number and court information
-                        Text(
-                          'Case No: #${caseData['case_no']}/${caseData['case_year']} | Court No: ${caseData['court_no']}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            Text(
+                              'Case No: #${caseData['case_no']}/${caseData['case_year']}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              '| Court No: ${caseData['court_no']}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
 
@@ -134,37 +163,50 @@ Future<void> showDateUpdateDialog(
                               ),
                             ),
                             const SizedBox(height: 4),
-                            DropdownButtonFormField<String>(
-                              value: selectedStage,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding:
-                                    EdgeInsets.symmetric(horizontal: 8),
-                              ),
-                              items: stages.map((stage) {
-                                return DropdownMenuItem(
-                                  value: stage['id'].toString(),
-                                  child: Text(
-                                    stage['stage_of_case'],
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (String? value) {
-                                setState(() {
-                                  selectedStage = value;
-                                });
-                              },
-                              selectedItemBuilder: (BuildContext context) {
-                                return stages.map((stage) {
-                                  return Text(
-                                    stage['stage_of_case'],
-                                    style: const TextStyle(fontSize: 14),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                            SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.85,
+                              child: DropdownButtonFormField<String>(
+                                value: selectedStage,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding:
+                                      EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                items: stages.map((stage) {
+                                  return DropdownMenuItem(
+                                    value: stage['id'].toString(),
+                                    child: Container(
+                                      width: MediaQuery.of(context).size.width *
+                                          0.58,
+                                      child: Text(
+                                        stage['stage_of_case'],
+                                        style: const TextStyle(fontSize: 14),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   );
-                                }).toList();
-                              },
+                                }).toList(),
+                                onChanged: (String? value) {
+                                  setState(() {
+                                    selectedStage = value;
+                                  });
+                                },
+                                selectedItemBuilder: (BuildContext context) {
+                                  return stages.map((stage) {
+                                    return Container(
+                                      width: MediaQuery.of(context).size.width *
+                                          0.58,
+                                      child: Text(
+                                        stage['stage_of_case'],
+                                        style: const TextStyle(fontSize: 14),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  }).toList();
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -208,12 +250,18 @@ Future<void> showDateUpdateDialog(
                             const SizedBox(width: 12),
                             ElevatedButton(
                               onPressed: () async {
+                                print('\n=== Starting Date Update ===');
+                                print('Test 5: Validating date');
                                 // Parse last date from caseData
                                 final lastDateStr = caseData['last_date'] ?? '';
                                 final lastDate = DateTime.tryParse(lastDateStr);
+                                print('Last Date: $lastDate');
+                                print('Selected Date: $selectedDate');
 
                                 if (lastDate != null &&
                                     selectedDate.isBefore(lastDate)) {
+                                  print(
+                                      'Error: Selected date is before last date');
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
@@ -225,6 +273,7 @@ Future<void> showDateUpdateDialog(
                                 }
 
                                 try {
+                                  print('Test 6: Sending update request');
                                   final response = await http.post(
                                     Uri.parse(
                                         '${AppConfig.baseUrl}case/dateupdate/'),
@@ -242,7 +291,13 @@ Future<void> showDateUpdateDialog(
                                     }),
                                   );
 
+                                  print(
+                                      'Update API Response Status: ${response.statusCode}');
+                                  print(
+                                      'Update API Response Body: ${response.body}');
+
                                   if (response.statusCode == 200) {
+                                    print('Test 7: Successfully updated date');
                                     if (context.mounted) {
                                       // Update the case data in the list
                                       final updatedCaseData =
@@ -279,6 +334,8 @@ Future<void> showDateUpdateDialog(
                                       Navigator.pop(context); // Close dialog
                                     }
                                   } else {
+                                    print(
+                                        'Error: Failed to update date. Status: ${response.statusCode}');
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
@@ -291,6 +348,8 @@ Future<void> showDateUpdateDialog(
                                     }
                                   }
                                 } catch (e) {
+                                  print(
+                                      'Error: Exception during date update: $e');
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
