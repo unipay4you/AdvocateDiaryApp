@@ -297,12 +297,235 @@ class _FilteredCasesScreenState extends State<FilteredCasesScreen> {
                                                       ],
                                                     ),
                                                     const SizedBox(height: 8),
-                                                    Text(
-                                                      '#${caseData['case_no']}/${caseData['case_year']}',
-                                                      style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.grey,
-                                                      ),
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceBetween,
+                                                      children: [
+                                                        Text(
+                                                          '#${caseData['case_no']}/${caseData['case_year']}',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 14,
+                                                            color: Colors.grey,
+                                                          ),
+                                                        ),
+                                                        StatefulBuilder(
+                                                          builder: (BuildContext
+                                                                  context,
+                                                              StateSetter
+                                                                  setState) {
+                                                            final isDecided =
+                                                                caseData[
+                                                                        'is_desided'] ??
+                                                                    false;
+                                                            return Row(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                const Text(
+                                                                  'Decided',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        14,
+                                                                    color: Colors
+                                                                        .grey,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    width: 4),
+                                                                Switch(
+                                                                  value:
+                                                                      isDecided,
+                                                                  onChanged: (bool
+                                                                      newValue) async {
+                                                                    if (newValue) {
+                                                                      setState(
+                                                                          () {
+                                                                        caseData['is_desided'] =
+                                                                            true;
+                                                                      });
+                                                                      final TextEditingController
+                                                                          commentsController =
+                                                                          TextEditingController();
+                                                                      final result =
+                                                                          await showDialog<
+                                                                              bool>(
+                                                                        context:
+                                                                            context,
+                                                                        barrierDismissible:
+                                                                            false,
+                                                                        builder:
+                                                                            (BuildContext
+                                                                                context) {
+                                                                          return AlertDialog(
+                                                                            title:
+                                                                                const Text('Case Decision Comments'),
+                                                                            content:
+                                                                                TextField(
+                                                                              controller: commentsController,
+                                                                              decoration: const InputDecoration(
+                                                                                hintText: 'Enter comments',
+                                                                                border: OutlineInputBorder(),
+                                                                              ),
+                                                                              maxLines: 3,
+                                                                            ),
+                                                                            actions: [
+                                                                              TextButton(
+                                                                                onPressed: () {
+                                                                                  Navigator.of(context).pop(false);
+                                                                                },
+                                                                                child: const Text('Cancel'),
+                                                                              ),
+                                                                              TextButton(
+                                                                                onPressed: () {
+                                                                                  Navigator.of(context).pop(true);
+                                                                                },
+                                                                                child: const Text('Confirm'),
+                                                                              ),
+                                                                            ],
+                                                                          );
+                                                                        },
+                                                                      );
+
+                                                                      if (result ==
+                                                                          true) {
+                                                                        try {
+                                                                          final apiService =
+                                                                              ApiService();
+                                                                          final token =
+                                                                              await apiService.getAccessToken();
+
+                                                                          final response =
+                                                                              await http.post(
+                                                                            Uri.parse('${AppConfig.baseUrl}case/partialedit/'),
+                                                                            headers: {
+                                                                              'Authorization': 'Bearer $token',
+                                                                              'Content-Type': 'application/json',
+                                                                            },
+                                                                            body:
+                                                                                json.encode({
+                                                                              'id': caseData['id'],
+                                                                              'is_desided': true,
+                                                                              'comments': commentsController.text.isEmpty ? "" : commentsController.text,
+                                                                            }),
+                                                                          );
+
+                                                                          if (response.statusCode ==
+                                                                              200) {
+                                                                            final responseData =
+                                                                                json.decode(response.body);
+                                                                            if (responseData['status'] ==
+                                                                                200) {
+                                                                              if (context.mounted) {
+                                                                                await _fetchFilteredCases();
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        } catch (e) {
+                                                                          setState(
+                                                                              () {
+                                                                            caseData['is_desided'] =
+                                                                                false;
+                                                                          });
+                                                                          if (context
+                                                                              .mounted) {
+                                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                                              SnackBar(
+                                                                                content: Text('Error updating case status: $e'),
+                                                                                backgroundColor: Colors.red,
+                                                                              ),
+                                                                            );
+                                                                          }
+                                                                        }
+                                                                      } else {
+                                                                        setState(
+                                                                            () {
+                                                                          caseData['is_desided'] =
+                                                                              false;
+                                                                        });
+                                                                      }
+                                                                      commentsController
+                                                                          .dispose();
+                                                                    } else {
+                                                                      try {
+                                                                        final apiService =
+                                                                            ApiService();
+                                                                        final token =
+                                                                            await apiService.getAccessToken();
+
+                                                                        final response =
+                                                                            await http.post(
+                                                                          Uri.parse(
+                                                                              '${AppConfig.baseUrl}case/partialedit/'),
+                                                                          headers: {
+                                                                            'Authorization':
+                                                                                'Bearer $token',
+                                                                            'Content-Type':
+                                                                                'application/json',
+                                                                          },
+                                                                          body:
+                                                                              json.encode({
+                                                                            'id':
+                                                                                caseData['id'],
+                                                                            'is_desided':
+                                                                                false,
+                                                                            'comments':
+                                                                                "",
+                                                                          }),
+                                                                        );
+
+                                                                        if (response.statusCode ==
+                                                                            200) {
+                                                                          final responseData =
+                                                                              json.decode(response.body);
+                                                                          if (responseData['status'] ==
+                                                                              200) {
+                                                                            if (context.mounted) {
+                                                                              await _fetchFilteredCases();
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      } catch (e) {
+                                                                        setState(
+                                                                            () {
+                                                                          caseData['is_desided'] =
+                                                                              true;
+                                                                        });
+                                                                        if (context
+                                                                            .mounted) {
+                                                                          ScaffoldMessenger.of(context)
+                                                                              .showSnackBar(
+                                                                            SnackBar(
+                                                                              content: Text('Error updating case status: $e'),
+                                                                              backgroundColor: Colors.red,
+                                                                            ),
+                                                                          );
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  },
+                                                                  activeColor:
+                                                                      Colors
+                                                                          .red,
+                                                                  inactiveTrackColor: Colors
+                                                                      .green
+                                                                      .withOpacity(
+                                                                          0.5),
+                                                                  inactiveThumbColor:
+                                                                      Colors
+                                                                          .green,
+                                                                  materialTapTargetSize:
+                                                                      MaterialTapTargetSize
+                                                                          .shrinkWrap,
+                                                                ),
+                                                              ],
+                                                            );
+                                                          },
+                                                        ),
+                                                      ],
                                                     ),
                                                     const SizedBox(height: 8),
                                                     Row(
@@ -371,7 +594,7 @@ class _FilteredCasesScreenState extends State<FilteredCasesScreen> {
                                                                 caseData);
                                                           },
                                                           child: Text(
-                                                            'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                            'Next: ${caseData['next_date'] ?? 'Not Available'}',
                                                             style:
                                                                 const TextStyle(
                                                               fontSize: 14,

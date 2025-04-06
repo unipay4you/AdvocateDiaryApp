@@ -202,6 +202,73 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      print('\n=== Starting Logout Process ===');
+      print('Test 1: Calling logout method');
+      await _apiService.logout();
+      print('Test 2: Logout successful, clearing token');
+
+      // Clear the access token from secure storage
+      await _storage.delete(key: 'access_token');
+      print('Test 3: Access token cleared from storage');
+
+      if (mounted) {
+        print('Test 4: Navigating to login screen');
+        // Pre-build the login screen
+        final loginScreen = const LoginScreen();
+
+        // Use a microtask to ensure smooth transition
+        Future.microtask(() {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    loginScreen,
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 300),
+              ),
+            );
+          }
+        });
+      }
+    } catch (e, stackTrace) {
+      print('\n=== Error in Logout ===');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      print('================\n');
+
+      // Even if logout fails, try to clear the token
+      try {
+        await _storage.delete(key: 'access_token');
+        print('Cleared access token despite logout error');
+      } catch (e) {
+        print('Failed to clear access token: $e');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during logout: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _logout,
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _checkLoginStatus() async {
     try {
       print('\n=== Checking Login Status ===');
@@ -285,6 +352,8 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         } else {
           print('Test 11: Error - User API status not 200');
+          // Clear token if API returns error
+          await _storage.delete(key: 'access_token');
           throw Exception(userResponse['message'] ?? 'Failed to get user data');
         }
       } else {
@@ -302,6 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
             e.toString().contains('Error in _checkLoginStatus')) {
           showDialog(
             context: context,
+            barrierDismissible: false,
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('Error'),
@@ -319,61 +389,6 @@ class _LoginScreenState extends State<LoginScreen> {
             },
           );
         }
-      }
-    }
-  }
-
-  Future<void> _logout() async {
-    try {
-      print('\n=== Starting Logout Process ===');
-      print('Test 1: Calling logout method');
-      await _apiService.logout();
-      print('Test 2: Logout successful, clearing token');
-
-      if (mounted) {
-        print('Test 3: Navigating to login screen');
-        // Pre-build the login screen
-        final loginScreen = const LoginScreen();
-
-        // Use a microtask to ensure smooth transition
-        Future.microtask(() {
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    loginScreen,
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  );
-                },
-                transitionDuration: const Duration(milliseconds: 300),
-              ),
-            );
-          }
-        });
-      }
-    } catch (e, stackTrace) {
-      print('\n=== Error in Logout ===');
-      print('Error: $e');
-      print('Stack trace: $stackTrace');
-      print('================\n');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error during logout: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Retry',
-              onPressed: _logout,
-              textColor: Colors.white,
-            ),
-          ),
-        );
       }
     }
   }

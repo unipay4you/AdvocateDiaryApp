@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../config/app_config.dart';
 import 'home_screen.dart';
+import 'edit_case_screen.dart';
 
 class CaseDetailScreen extends StatefulWidget {
   final Map<String, dynamic> caseData;
@@ -155,7 +156,23 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                             Icons.edit,
                             'Edit Case',
                             () {
-                              // TODO: Implement edit case functionality
+                              print('\n=== Starting Edit Case Navigation ===');
+                              print('Test 1: Edit button clicked');
+                              print(
+                                  'Test 2: Case data being passed: ${widget.caseData}');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditCaseScreen(
+                                    caseId: widget.caseData['id'].toString(),
+                                    userData: widget.userData,
+                                    count: widget.count,
+                                  ),
+                                ),
+                              ).then((_) {
+                                print('Test 3: Returned from EditCaseScreen');
+                                print('=== End Edit Case Navigation ===\n');
+                              });
                             },
                           ),
                         ),
