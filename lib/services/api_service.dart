@@ -584,4 +584,49 @@ class ApiService {
       rethrow;
     }
   }
+
+  Future<void> removeAccessToken() async {
+    try {
+      await _storage.delete(key: 'access_token');
+      print('Access token removed successfully');
+    } catch (e) {
+      print('Error removing access token: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> changeEmail(String newEmail) async {
+    print('\n=== Calling Change Email API ===');
+    print('Test 1: New email: $newEmail');
+
+    try {
+      final token = await getAccessToken();
+      if (token == null) {
+        throw Exception('No access token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}changeemail/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'new_email': newEmail,
+        }),
+      );
+
+      print('Test 2: Response status: ${response.statusCode}');
+      print('Test 3: Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+      return {
+        'status': response.statusCode,
+        'message': data['message'] ?? 'Email change request submitted',
+      };
+    } catch (e) {
+      print('\nError in changeEmail: $e');
+      rethrow;
+    }
+  }
 }

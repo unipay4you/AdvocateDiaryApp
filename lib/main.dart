@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/profile_update_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/otp_verification_screen.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -35,6 +36,8 @@ class MyApp extends StatelessWidget {
         '/profile-update': (context) => const ProfileUpdateScreen(userData: {}),
         '/email-verification': (context) =>
             const EmailVerificationScreen(email: ''),
+        '/otp-verification': (context) =>
+            const OtpVerificationScreen(phoneNumber: ''),
       },
     );
   }
@@ -84,13 +87,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final cases = response['cases'] ?? [];
         final count = response['count'] ?? {};
 
-        if (userData['is_first_login'] == true) {
-          print('First login detected, navigating to profile update');
+        // Check conditions in priority order
+        if (userData['is_phone_number_verified'] == false) {
+          print('Phone not verified, navigating to OTP verification');
           if (mounted) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => ProfileUpdateScreen(userData: userData),
+                builder: (context) => OtpVerificationScreen(
+                  phoneNumber: userData['phone_number'] ?? '',
+                ),
               ),
             );
           }
@@ -106,8 +112,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
               ),
             );
           }
+        } else if (userData['is_first_login'] == true) {
+          print('First login detected, navigating to profile update');
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileUpdateScreen(userData: userData),
+              ),
+            );
+          }
         } else {
-          print('User verified, navigating to home');
+          print('All verifications complete, navigating to home');
           if (mounted) {
             Navigator.pushReplacement(
               context,

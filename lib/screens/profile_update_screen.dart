@@ -5,6 +5,7 @@ import '../config/app_config.dart';
 import '../screens/login_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter/services.dart';
 
 class ProfileUpdateScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -265,11 +266,20 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
     });
 
     try {
+      // Convert date format from DD-MM-YYYY to YYYY-MM-DD
+      String formattedDob = '';
+      if (_dobController.text.isNotEmpty) {
+        final parts = _dobController.text.split('-');
+        if (parts.length == 3) {
+          formattedDob = '${parts[2]}-${parts[1]}-${parts[0]}';
+        }
+      }
+
       final Map<String, dynamic> userData = {
         'phone_number': _phoneController.text,
         'email': _emailController.text,
         'user_name': _nameController.text,
-        'user_dob': _dobController.text,
+        'user_dob': formattedDob,
         'user_address1': _address1Controller.text,
         'user_address2': _address2Controller.text,
         'user_address3': _address3Controller.text,
@@ -287,6 +297,10 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         // If no new image is selected but there's an existing image, keep the existing image path
         userData['user_profile_image'] = widget.userData['user_profile_image'];
       }
+
+      print('Sending profile update request with data:');
+      print('Date of Birth (YYYY-MM-DD): $formattedDob');
+      print('Other user data: $userData');
 
       final response = await _apiService.updateProfile(userData);
 
@@ -389,15 +403,47 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
       );
 
       if (pickedFile != null) {
+        // Check file extension
+        final extension = pickedFile.path.split('.').last.toLowerCase();
+        if (!['jpg', 'jpeg', 'png'].contains(extension)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please select a JPG, JPEG or PNG image'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Check file size (50KB = 50 * 1024 bytes)
+        final file = File(pickedFile.path);
+        final fileSize = await file.length();
+        if (fileSize > 50 * 1024) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Image size should be less than 50KB'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
         setState(() {
-          _selectedImage = File(pickedFile.path);
+          _selectedImage = file;
         });
       }
     } catch (e) {
       print('Error picking image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -405,56 +451,51 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
 
   // Add this method to format date
   String _formatDate(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
+    return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
   }
 
   // Add this method to parse date
   DateTime? _parseDate(String dateStr) {
     if (dateStr.isEmpty) return null;
     try {
-      final months = {
-        'Jan': 1,
-        'Feb': 2,
-        'Mar': 3,
-        'Apr': 4,
-        'May': 5,
-        'Jun': 6,
-        'Jul': 7,
-        'Aug': 8,
-        'Sep': 9,
-        'Oct': 10,
-        'Nov': 11,
-        'Dec': 12
-      };
-
-      final parts = dateStr.split(' ');
+      final parts = dateStr.split('-');
       if (parts.length == 3) {
         final day = int.parse(parts[0]);
-        final month = months[parts[1]];
+        final month = int.parse(parts[1]);
         final year = int.parse(parts[2]);
-        if (month != null) {
-          return DateTime(year, month, day);
-        }
+        return DateTime(year, month, day);
       }
       return null;
     } catch (e) {
       print('Error parsing date: $e');
       return null;
     }
+  }
+
+  // Add this method to validate date format
+  String? _validateDate(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Date of Birth is required';
+    }
+
+    // Check format DD-MM-YYYY
+    final RegExp dateRegExp = RegExp(r'^\d{2}-\d{2}-\d{4}$');
+    if (!dateRegExp.hasMatch(value)) {
+      return 'Please enter date in DD-MM-YYYY format';
+    }
+
+    // Try to parse the date
+    final date = _parseDate(value);
+    if (date == null) {
+      return 'Please enter a valid date';
+    }
+
+    // Check if date is in the past
+    if (date.isAfter(DateTime.now())) {
+      return 'Date of Birth cannot be in the future';
+    }
+
+    return null;
   }
 
   @override
@@ -597,24 +638,52 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                     // 4. Date of Birth
                     TextFormField(
                       controller: _dobController,
-                      decoration: const InputDecoration(
-                        labelText: 'Date of Birth',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.calendar_today),
+                      decoration: InputDecoration(
+                        labelText: 'Date of Birth (DD-MM-YYYY)',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.calendar_today),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.calendar_month),
+                          onPressed: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: _parseDate(_dobController.text) ??
+                                  DateTime.now(),
+                              firstDate: DateTime(1900),
+                              lastDate: DateTime.now(),
+                            );
+                            if (date != null) {
+                              _dobController.text = _formatDate(date);
+                            }
+                          },
+                        ),
                       ),
-                      readOnly: true,
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate:
-                              _parseDate(_dobController.text) ?? DateTime.now(),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (date != null) {
-                          _dobController.text = _formatDate(date);
+                      readOnly: false,
+                      validator: _validateDate,
+                      onChanged: (value) {
+                        // Format the input as user types
+                        if (value.length == 2 || value.length == 5) {
+                          if (value.length == 2 && !value.contains('-')) {
+                            _dobController.text = '$value-';
+                            _dobController.selection =
+                                TextSelection.fromPosition(
+                              TextPosition(offset: _dobController.text.length),
+                            );
+                          } else if (value.length == 5 &&
+                              value[2] == '-' &&
+                              !value.substring(3).contains('-')) {
+                            _dobController.text = '$value-';
+                            _dobController.selection =
+                                TextSelection.fromPosition(
+                              TextPosition(offset: _dobController.text.length),
+                            );
+                          }
                         }
                       },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                     ),
                     const SizedBox(height: 20),
 

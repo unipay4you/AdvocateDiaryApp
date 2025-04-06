@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
 
-class EmailVerificationScreen extends StatelessWidget {
+class EmailVerificationScreen extends StatefulWidget {
   final String email;
 
   const EmailVerificationScreen({
@@ -10,9 +10,28 @@ class EmailVerificationScreen extends StatelessWidget {
     required this.email,
   }) : super(key: key);
 
+  @override
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
+}
+
+class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+  late String _currentEmail;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentEmail = widget.email;
+  }
+
   Future<void> _handleResendVerification(BuildContext context) async {
     print('\n=== Resending Verification Email ===');
     print('Test 1: Calling resend verification API');
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final apiService = ApiService();
@@ -63,6 +82,12 @@ class EmailVerificationScreen extends StatelessWidget {
           },
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -100,6 +125,132 @@ class EmailVerificationScreen extends StatelessWidget {
     });
   }
 
+  void _handleChangeEmail(BuildContext context) async {
+    print('\n=== Opening Change Email Dialog ===');
+
+    final newEmailController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Change Email'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: newEmailController,
+                    decoration: const InputDecoration(
+                      labelText: 'New Email',
+                      hintText: 'Enter your new email address',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an email address';
+                      }
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) {
+                        return 'Please enter a valid email address';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.of(context).pop();
+                    await _submitChangeEmail(newEmailController.text, context);
+                  }
+                },
+                child: const Text('Change'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  Future<void> _submitChangeEmail(String newEmail, BuildContext context) async {
+    print('\n=== Submitting Change Email Request ===');
+    print('Test 1: New email: $newEmail');
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final apiService = ApiService();
+      final response = await apiService.changeEmail(newEmail);
+
+      print('Test 2: Response received: ${response['status']}');
+      print('Test 3: Response message: ${response['message']}');
+
+      if (context.mounted) {
+        if (response['status'] == 200) {
+          setState(() {
+            _currentEmail = newEmail;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(response['message'] ?? 'Email changed successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Clear token and navigate to login
+          await apiService.clearAccessToken();
+          if (context.mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const LoginScreen(),
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response['message'] ?? 'Failed to change email'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('\nError in _submitChangeEmail: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,24 +275,48 @@ class EmailVerificationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'We have sent a verification link to:\n$email\n\nPlease check your inbox and click on the verification link to complete your registration.',
+                'We have sent a verification link to:\n$_currentEmail\n\nPlease check your inbox and click on the verification link to complete your registration.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: _isLoading ? null : () => _handleChangeEmail(context),
+                child: Text(
+                  'Want to use a different email?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _isLoading ? Colors.grey : Colors.blue[700],
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
               ElevatedButton(
-                onPressed: () => _handleResendVerification(context),
+                onPressed: _isLoading
+                    ? null
+                    : () => _handleResendVerification(context),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text('Resend Verification Email'),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('Resend Verification Email'),
               ),
               const SizedBox(height: 20),
               TextButton(
-                onPressed: () => _handleBackToLogin(context),
+                onPressed:
+                    _isLoading ? null : () => _handleBackToLogin(context),
                 child: const Text('Back to Login'),
               ),
             ],
