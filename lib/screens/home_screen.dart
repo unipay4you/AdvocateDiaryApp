@@ -10,6 +10,239 @@ import '../utils/date_update_dialog.dart';
 import 'filtered_cases_screen.dart';
 import 'add_case_screen.dart';
 import 'profile_update_screen.dart';
+import 'package:table_calendar/table_calendar.dart';
+
+class CalendarDialog extends StatefulWidget {
+  final Map<String, dynamic> userData;
+  final Map<String, dynamic> count;
+
+  const CalendarDialog({
+    Key? key,
+    required this.userData,
+    required this.count,
+  }) : super(key: key);
+
+  @override
+  State<CalendarDialog> createState() => _CalendarDialogState();
+}
+
+class _CalendarDialogState extends State<CalendarDialog> {
+  late DateTime _focusedDay;
+  DateTime? _selectedDay;
+  Map<String, int> _dateWiseCases = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedDay = DateTime.now();
+    _fetchCalendarData(_focusedDay.month, _focusedDay.year);
+  }
+
+  Future<void> _fetchCalendarData(int month, int year) async {
+    try {
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}case/calenderdetail/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'req_month': month,
+          'req_year': year,
+        }),
+      );
+
+      print('\n=== Calendar API Request ===');
+      print('Request Body: {"req_month": $month, "req_year": $year}');
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('=== End Calendar API Request ===\n');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 200 && data['cases'] != null) {
+          Map<String, int> dateWiseCases = {};
+
+          for (var caseData in data['cases']) {
+            if (caseData['last_date'] != null) {
+              String date = caseData['last_date'];
+              dateWiseCases[date] = (dateWiseCases[date] ?? 0) + 1;
+            }
+          }
+
+          print(
+              '\n=== Date-wise Case Counts for ${_getMonthName(month)} $year ===');
+          // Sort dates for better readability
+          final sortedDates = dateWiseCases.keys.toList()..sort();
+          for (var date in sortedDates) {
+            // Format the date to DD/MM/YYYY
+            final dateParts = date.split('-');
+            final formattedDate =
+                '${dateParts[2]}/${dateParts[1]}/${dateParts[0]}';
+            print('Date $formattedDate total count ${dateWiseCases[date]}');
+          }
+          print('Total dates with cases: ${dateWiseCases.length}');
+          print('=== End Date-wise Case Counts ===\n');
+
+          if (mounted) {
+            setState(() {
+              _dateWiseCases = dateWiseCases;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching calendar data: $e');
+    }
+  }
+
+  String _getMonthName(int month) {
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return monthNames[month - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.95,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Calendar',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            TableCalendar(
+              firstDay: DateTime.utc(2000, 1, 1),
+              lastDay: DateTime.utc(2100, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) {
+                return isSameDay(_selectedDay, day);
+              },
+              calendarFormat: CalendarFormat.month,
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              calendarStyle: CalendarStyle(
+                todayDecoration: BoxDecoration(
+                  color:
+                      const Color.fromRGBO(123, 109, 217, 1).withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: const BoxDecoration(
+                  color: Color.fromRGBO(123, 109, 217, 1),
+                  shape: BoxShape.circle,
+                ),
+                weekendTextStyle: const TextStyle(color: Colors.red),
+                outsideDaysVisible: true,
+              ),
+              availableGestures: AvailableGestures.all,
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+              },
+              onPageChanged: (focusedDay) {
+                setState(() {
+                  _focusedDay = focusedDay;
+                });
+                _fetchCalendarData(focusedDay.month, focusedDay.year);
+              },
+              calendarBuilders: CalendarBuilders(
+                defaultBuilder: (context, day, focusedDay) {
+                  final dateStr =
+                      '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                  final caseCount = _dateWiseCases[dateStr] ?? 0;
+
+                  return Container(
+                    margin: const EdgeInsets.all(2),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${day.day}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        if (caseCount > 0)
+                          Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color.fromRGBO(123, 109, 217, 1)
+                                  .withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '$caseCount',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color.fromRGBO(123, 109, 217, 1),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class HomeScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -541,158 +774,111 @@ class HomeScreen extends StatelessWidget {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color.fromRGBO(235, 235, 234, 1),
-                    const Color.fromRGBO(235, 235, 234, 1)
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile Section
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color.fromRGBO(235, 235, 234, 1),
+                      const Color.fromRGBO(235, 235, 234, 1)
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF7C4DFF).withOpacity(0.1),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
                   ],
                 ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF7C4DFF).withOpacity(0.1),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color.fromRGBO(235, 235, 234, 1),
-                          const Color.fromRGBO(235, 235, 234, 1)
-                        ],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color.fromRGBO(235, 235, 234, 1),
+                            const Color.fromRGBO(235, 235, 234, 1)
+                          ],
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 30,
+                        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
+                        backgroundImage: userData['user_profile_image'] != null
+                            ? NetworkImage(_getProfileImageUrl(
+                                userData['user_profile_image']))
+                            : null,
+                        child: userData['user_profile_image'] == null
+                            ? const Icon(Icons.person,
+                                size: 35, color: Colors.white)
+                            : null,
                       ),
                     ),
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-                      backgroundImage: userData['user_profile_image'] != null
-                          ? NetworkImage(_getProfileImageUrl(
-                              userData['user_profile_image']))
-                          : null,
-                      child: userData['user_profile_image'] == null
-                          ? const Icon(Icons.person,
-                              size: 35, color: Colors.white)
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hi ${userData['user_type']}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                        ),
-                        Text(
-                          userData['user_name'],
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        if (userData['advocate_registration_number'] != null)
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            userData['advocate_registration_number'],
+                            'Hi ${userData['user_type']}',
                             style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
+                              fontSize: 16,
+                              color: Colors.black,
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Carousel Slider
-            FlutterCarousel(
-              items: carouselImages.map((image) {
-                print('Test 13: Building carousel item for $image');
-                return Builder(
-                  builder: (BuildContext context) {
-                    return Container(
-                      width: MediaQuery.of(context).size.width,
-                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(235, 235, 234, 1),
-                        borderRadius: BorderRadius.circular(10),
-                        image: DecorationImage(
-                          image: AssetImage(image),
-                          fit: BoxFit.cover,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
+                          Text(
+                            userData['user_name'],
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
+                          if (userData['advocate_registration_number'] != null)
+                            Text(
+                              userData['advocate_registration_number'],
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
                         ],
                       ),
-                    );
-                  },
-                );
-              }).toList(),
-              options: CarouselOptions(
-                height: 170,
-                autoPlay: true,
-                enlargeCenterPage: true,
-                viewportFraction: 0.8,
-                autoPlayInterval: const Duration(seconds: 3),
-                autoPlayAnimationDuration: const Duration(milliseconds: 800),
-                autoPlayCurve: Curves.fastOutSlowIn,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Round Shape Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: roundButtons.map((button) {
-                  print(
-                      'Test 14: Building round button for ${button['label']}');
-                  return Column(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
+              // Carousel Slider
+              FlutterCarousel(
+                items: carouselImages.map((image) {
+                  print('Test 13: Building carousel item for $image');
+                  return Builder(
+                    builder: (BuildContext context) {
+                      return Container(
+                        width: MediaQuery.of(context).size.width,
+                        margin: const EdgeInsets.symmetric(horizontal: 5.0),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color.fromRGBO(123, 109, 217, 1),
-                              const Color.fromRGBO(123, 109, 217, 1),
-                            ],
+                          color: const Color.fromRGBO(235, 235, 234, 1),
+                          borderRadius: BorderRadius.circular(10),
+                          image: DecorationImage(
+                            image: AssetImage(image),
+                            fit: BoxFit.cover,
                           ),
-                          shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
@@ -701,124 +887,268 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: IconButton(
-                          icon: Icon(button['icon'], color: Colors.white),
-                          onPressed: () {
-                              print(
-                                  'Test 15: ${button['label']} button pressed');
-                            // TODO: Implement button action
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        button['label'],
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   );
                 }).toList(),
+                options: CarouselOptions(
+                  height: 170,
+                  autoPlay: true,
+                  enlargeCenterPage: true,
+                  viewportFraction: 0.8,
+                  autoPlayInterval: const Duration(seconds: 3),
+                  autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                  autoPlayCurve: Curves.fastOutSlowIn,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              // Add New Case and Daily List Buttons
+              // Round Shape Buttons
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          print('Test 17.1: Add New Case button pressed');
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (context) => const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color.fromRGBO(123, 109, 217, 1),
-                                ),
-                              ),
+                    Column(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color.fromRGBO(123, 109, 217, 1),
+                                const Color.fromRGBO(123, 109, 217, 1),
+                              ],
                             ),
-                          );
-                          Future.delayed(const Duration(milliseconds: 100), () {
-                            Navigator.pop(context); // Remove loading dialog
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AddCaseScreen(
-                                  userData: userData,
-                                  count: count,
-                                ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
-                            );
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromRGBO(123, 109, 217, 1),
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add, color: Colors.white),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddCaseScreen(
+                                    userData: userData,
+                                    count: count,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                        child: const Text(
-                          'Add New Case',
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Add Case',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 12,
+                            color: Colors.black,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          print('Test 17.2: Daily List button pressed');
-                          // TODO: Navigate to daily list screen
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromRGBO(123, 109, 217, 1),
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                    Column(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color.fromRGBO(123, 109, 217, 1),
+                                const Color.fromRGBO(123, 109, 217, 1),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.search, color: Colors.white),
+                            onPressed: () {
+                              // TODO: Implement search functionality
+                            },
                           ),
                         ),
-                        child: const Text(
-                          'Daily List',
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Search',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 12,
+                            color: Colors.black,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
                           ),
                         ),
-                      ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color.fromRGBO(123, 109, 217, 1),
+                                const Color.fromRGBO(123, 109, 217, 1),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.calendar_today,
+                                color: Colors.white),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return CalendarDialog(
+                                    userData: userData,
+                                    count: count,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Calendar',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color.fromRGBO(123, 109, 217, 1),
+                                const Color.fromRGBO(123, 109, 217, 1),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.people, color: Colors.white),
+                            onPressed: () {
+                              // TODO: Implement clients functionality
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Clients',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color.fromRGBO(123, 109, 217, 1),
+                                const Color.fromRGBO(123, 109, 217, 1),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.assessment,
+                                color: Colors.white),
+                            onPressed: () {
+                              // TODO: Implement reports functionality
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Reports',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
 
-            // Case Containers
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 15,
-                crossAxisSpacing: 15,
-                children: caseContainers.map((item) {
-                  print(
-                      'Test 16: Building case container for ${item['title']}');
+              // Case Containers
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 15,
+                  crossAxisSpacing: 15,
+                  children: caseContainers.map((item) {
+                    print(
+                        'Test 16: Building case container for ${item['title']}');
                     return InkWell(
                       onTap: () {
                         String filter = '';
@@ -848,140 +1178,140 @@ class HomeScreen extends StatelessWidget {
                         );
                       },
                       child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: item['gradient'],
-                      ),
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color.fromRGBO(123, 109, 217, 1),
-                            shape: BoxShape.circle,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: item['gradient'],
                           ),
-                          child: Icon(
-                            item['icon'],
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          item['title'],
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item['subtitle'],
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${item['count']} cases',
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color.fromRGBO(123, 109, 217, 1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                item['icon'],
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              item['title'],
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item['subtitle'],
+                              style: TextStyle(
+                                color: Colors.black.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${item['count']} cases',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                    ),
-                  );
-                }).toList(),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Active Cases List
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Active Cases',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+              // Active Cases List
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Active Cases',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 15),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color.fromRGBO(235, 235, 234, 1),
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: cases.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final caseData = entry.value;
-                        // Determine which party should be bold based on client_type
+                    const SizedBox(height: 15),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color.fromRGBO(235, 235, 234, 1),
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: cases.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final caseData = entry.value;
+                          // Determine which party should be bold based on client_type
                           final isPetitioner = caseData['client_type']
                                   ?.toString()
                                   .toLowerCase() ==
-                                'petitioner';
-                        final petitionerStyle = TextStyle(
-                          fontWeight: isPetitioner
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 16,
-                        );
-                        final respondentStyle = TextStyle(
-                          fontWeight: !isPetitioner
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 16,
-                        );
+                              'petitioner';
+                          final petitionerStyle = TextStyle(
+                            fontWeight: isPetitioner
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 16,
+                          );
+                          final respondentStyle = TextStyle(
+                            fontWeight: !isPetitioner
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 16,
+                          );
 
-                        return Column(
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
+                          return Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
                                   color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.1),
@@ -1046,68 +1376,68 @@ class HomeScreen extends StatelessWidget {
                                     print(
                                         '=== End Navigation to Case Detail ===\n');
                                   },
-                              child: Padding(
+                                  child: Padding(
                                     padding: const EdgeInsets.all(12),
-                                child: Row(
+                                    child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color.fromRGBO(
-                                            123, 109, 217, 1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.gavel,
-                                          color: Colors.white, size: 20),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: const Color.fromRGBO(
+                                                123, 109, 217, 1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.gavel,
+                                              color: Colors.white, size: 20),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Expanded(
-                                                child: Text(
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
                                                       caseData['petitioner'] ??
                                                           '',
-                                                  style: petitionerStyle,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
+                                                      style: petitionerStyle,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
                                                   const Padding(
                                                     padding:
                                                         EdgeInsets.symmetric(
                                                             horizontal: 8),
                                                     child: Text('vs'),
                                                   ),
-                                              Expanded(
-                                                child: Text(
+                                                  Expanded(
+                                                    child: Text(
                                                       caseData['respondent'] ??
                                                           '',
-                                                  style: respondentStyle,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
+                                                      style: respondentStyle,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
+                                              const SizedBox(height: 8),
                                               Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment
                                                         .spaceBetween,
                                                 children: [
-                                          Text(
-                                            '#${caseData['case_no']}/${caseData['case_year']}',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey,
-                                            ),
+                                                  Text(
+                                                    '#${caseData['case_no']}/${caseData['case_year']}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.grey,
+                                                    ),
                                                   ),
                                                   StatefulBuilder(
                                                     builder: (BuildContext
@@ -1393,54 +1723,54 @@ class HomeScreen extends StatelessWidget {
                                                     },
                                                   ),
                                                 ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'Court No: ${caseData['court_no']}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    'Court No: ${caseData['court_no']}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.black87,
                                                       fontWeight:
                                                           FontWeight.bold,
-                                                ),
-                                              ),
+                                                    ),
+                                                  ),
                                                   const SizedBox(width: 16),
-                                              Text(
-                                                'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black87,
+                                                  Text(
+                                                    'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.black87,
                                                       fontWeight:
                                                           FontWeight.bold,
-                                                ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            caseData['stage_of_case']
-                                                    ['stage_of_case'] ??
-                                                '',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.blue,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisAlignment:
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                caseData['stage_of_case']
+                                                        ['stage_of_case'] ??
+                                                    '',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.blue,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                mainAxisAlignment:
                                                     MainAxisAlignment
                                                         .spaceBetween,
-                                            children: [
-                                              Text(
-                                                'Last: ${caseData['last_date'] ?? 'N/A'}',
-                                                style: const TextStyle(
+                                                children: [
+                                                  Text(
+                                                    'Last: ${caseData['last_date'] ?? 'N/A'}',
+                                                    style: const TextStyle(
                                                       fontSize: 14,
-                                                  color: Colors.black87,
+                                                      color: Colors.black87,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
@@ -1451,464 +1781,40 @@ class HomeScreen extends StatelessWidget {
                                                           context, caseData);
                                                     },
                                                     child: Text(
-                                                'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                style: const TextStyle(
+                                                      'Next: ${caseData['next_date'] ?? 'N/A'}',
+                                                      style: const TextStyle(
                                                         fontSize: 14,
-                                                  color: Colors.black87,
+                                                        color: Colors.black87,
                                                         fontWeight:
                                                             FontWeight.bold,
                                                       ),
-                                                ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                    ),
-                                ),
-                              ),
-                            ),
-                            if (index < cases.length - 1)
-                                const SizedBox(height: 4),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-        onPressed: () {
-          print('Test 17: Floating action button pressed');
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              print('Test 18: Building Add New dialog');
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color.fromRGBO(235, 235, 234, 1),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Add New',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 20,
-                        runSpacing: 20,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          _buildActionButton(
-                            context,
-                            Icons.gavel,
-                            'New Case',
-                            const Color.fromRGBO(123, 109, 217, 1),
-                            () {
-                              print('Test 19: New Case button pressed');
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AddCaseScreen(
-                                    userData: userData,
-                                    count: count,
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                          _buildActionButton(
-                            context,
-                            Icons.person_add,
-                            'New Client',
-                            const Color.fromRGBO(123, 109, 217, 1),
-                            () {
-                              print('Test 20: New Client button pressed');
-                              Navigator.pop(context);
-                              // TODO: Navigate to add client screen
-                            },
-                          ),
-                          _buildActionButton(
-                            context,
-                            Icons.note_add,
-                            'New Document',
-                            const Color.fromRGBO(123, 109, 217, 1),
-                            () {
-                              print('Test 21: New Document button pressed');
-                              Navigator.pop(context);
-                              // TODO: Navigate to add document screen
-                            },
-                          ),
-                          _buildActionButton(
-                            context,
-                            Icons.event,
-                            'New Event',
-                            const Color.fromRGBO(123, 109, 217, 1),
-                            () {
-                              print('Test 22: New Event button pressed');
-                              Navigator.pop(context);
-                              // TODO: Navigate to add event screen
-                            },
-                          ),
-                        ],
+                              ),
+                              if (index < cases.length - 1)
+                                const SizedBox(height: 4),
+                            ],
+                          );
+                        }).toList(),
                       ),
-                      const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () {
-                          print('Test 23: Cancel button pressed');
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Cancel',
-                            style: TextStyle(color: Colors.black)),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          );
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-    BuildContext context,
-    IconData icon,
-    String label,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    print('Test 24: Building action button for $label');
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 120,
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color.fromRGBO(235, 235, 234, 1),
-              const Color.fromRGBO(235, 235, 234, 1),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(123, 109, 217, 1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildCaseList() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: cases.length,
-      itemBuilder: (context, index) {
-        final caseData = cases[index];
-        print('\n=== Building Case List Item ===');
-        print('Test 1: Case Data:');
-        print('  - ID: ${caseData['id']}');
-        print('  - Petitioner: ${caseData['petitioner']}');
-        print('  - Respondent: ${caseData['respondent']}');
-        print('  - Client Type: ${caseData['client_type']}');
-        print(
-            '  - Case Number: ${caseData['case_no']}/${caseData['case_year']}');
-        print('  - Court Number: ${caseData['court_no']}');
-        print('  - Stage: ${caseData['stage_of_case']['stage_of_case']}');
-        print('  - Sub Advocate: ${caseData['sub_advocate']}');
-        print('  - Last Date: ${caseData['last_date']}');
-        print('  - Next Date: ${caseData['next_date']}');
-
-        // Determine which party should be bold based on client_type
-        final isPetitioner =
-            caseData['client_type']?.toString().toLowerCase() == 'petitioner';
-        final petitionerStyle = TextStyle(
-          fontWeight: isPetitioner ? FontWeight.bold : FontWeight.normal,
-          fontSize: 16,
-        );
-        final respondentStyle = TextStyle(
-          fontWeight: !isPetitioner ? FontWeight.bold : FontWeight.normal,
-          fontSize: 16,
-        );
-
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            onTap: () {
-              print('Test 2: Case tapped - ID: ${caseData['id']}');
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return Dialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(235, 235, 234, 1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Case Details',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'Case No: #${caseData['case_no']}/${caseData['case_year']}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Petitioner: ${caseData['petitioner'] ?? 'N/A'}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            'Respondent: ${caseData['respondent'] ?? 'N/A'}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            'Court No: ${caseData['court_no']}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            'Stage: ${caseData['stage_of_case']['stage_of_case'] ?? 'N/A'}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            'Last Date: ${caseData['last_date'] ?? 'N/A'}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            'Next Date: ${caseData['next_date'] ?? 'N/A'}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Implement edit case functionality
-                                  Navigator.pop(context);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromRGBO(123, 109, 217, 1),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Edit Case'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Implement view documents functionality
-                                  Navigator.pop(context);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromRGBO(123, 109, 217, 1),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('View Documents'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  // TODO: Implement add hearing functionality
-                                  Navigator.pop(context);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromRGBO(123, 109, 217, 1),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Add Hearing'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Line 1: Petitioner vs Respondent with conditional bold
-                Row(
-                  children: [
-                    Text(
-                      caseData['petitioner'] ?? '',
-                      style: petitionerStyle,
-                    ),
-                    const Text(' vs '),
-                    Text(
-                      caseData['respondent'] ?? '',
-                      style: respondentStyle,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Line 2: Case number and year
-                Text(
-                  '#${caseData['case_no']}/${caseData['case_year']}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Line 3: Court number and Reference
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Court No: ${caseData['court_no']}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    Text(
-                      'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Line 4: Stage of case
-                Text(
-                  caseData['stage_of_case']['stage_of_case'] ?? '',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.blue,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Line 5: Last date and Next date
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Last: ${caseData['last_date'] ?? 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        _showNextDateUpdateDialog(context, caseData);
-                      },
-                      child: Text(
-                      'Next: ${caseData['next_date'] ?? 'N/A'}',
-                      style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

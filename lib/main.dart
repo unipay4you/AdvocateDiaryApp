@@ -36,8 +36,10 @@ class MyApp extends StatelessWidget {
         '/profile-update': (context) => const ProfileUpdateScreen(userData: {}),
         '/email-verification': (context) =>
             const EmailVerificationScreen(email: ''),
-        '/otp-verification': (context) =>
-            const OtpVerificationScreen(phoneNumber: ''),
+        '/otp-verification': (context) => const OtpVerificationScreen(
+              phoneNumber: '',
+              accessToken: '',
+            ),
       },
     );
   }
@@ -96,6 +98,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               MaterialPageRoute(
                 builder: (context) => OtpVerificationScreen(
                   phoneNumber: userData['phone_number'] ?? '',
+                  accessToken: token,
                 ),
               ),
             );

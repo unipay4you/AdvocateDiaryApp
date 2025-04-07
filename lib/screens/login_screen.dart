@@ -100,6 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(
               builder: (context) => OtpVerificationScreen(
                 phoneNumber: _mobileController.text,
+                accessToken: response['data']['access_token'],
               ),
             ),
           );
