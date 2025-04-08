@@ -5,6 +5,8 @@ import 'screens/email_verification_screen.dart';
 import 'screens/profile_update_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/otp_verification_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/change_password_screen.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -28,6 +30,9 @@ class MyApp extends StatelessWidget {
         '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/change-password': (context) =>
+            const ChangePasswordScreen(phoneNumber: ''),
         '/home': (context) => const HomeScreen(
               userData: {},
               cases: [],
