@@ -315,84 +315,84 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             },
           ),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
-                  Text(
-                    'Enter the 6-digit OTP sent to ${widget.phoneNumber}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 40),
-                  // OTP Input Fields
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(
-                      6,
-                      (index) => SizedBox(
-                        width: 45,
-                        child: TextFormField(
-                          controller: _otpControllers[index],
-                          focusNode: _focusNodes[index],
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 1,
-                          decoration: const InputDecoration(
-                            counterText: '',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return '';
-                            }
-                            return null;
-                          },
-                          onChanged: (value) {
-                            if (value.length == 1) {
-                              if (index < 5) {
-                                _focusNodes[index + 1].requestFocus();
-                              }
-                            }
-                          },
-                          onEditingComplete: () {
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 40),
+                Text(
+                  'Enter the 6-digit OTP sent to ${widget.phoneNumber}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 40),
+                // OTP Input Fields
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(
+                    6,
+                    (index) => SizedBox(
+                      width: 45,
+                      child: TextFormField(
+                        controller: _otpControllers[index],
+                        focusNode: _focusNodes[index],
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        maxLength: 1,
+                        decoration: const InputDecoration(
+                          counterText: '',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          if (value.length == 1) {
                             if (index < 5) {
                               _focusNodes[index + 1].requestFocus();
                             }
-                          },
-                        ),
+                          }
+                        },
+                        onEditingComplete: () {
+                          if (index < 5) {
+                            _focusNodes[index + 1].requestFocus();
+                          }
+                        },
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  // Verify OTP Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _verifyOtp,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                ),
+                const SizedBox(height: 30),
+                // Verify OTP Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _verifyOtp,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text('Verify OTP'),
                   ),
-                  const SizedBox(height: 20),
-                  // Resend OTP Link
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Verify OTP'),
+                ),
+                const SizedBox(height: 20),
+                // Resend OTP Link
                   if (_resendAttempts < 3)
-                    TextButton(
+                TextButton(
                       onPressed: _isResendEnabled ? _resendOtp : null,
                       child: Text(
                         _isResendEnabled

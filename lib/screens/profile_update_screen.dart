@@ -463,7 +463,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         final day = int.parse(parts[0]);
         final month = int.parse(parts[1]);
         final year = int.parse(parts[2]);
-        return DateTime(year, month, day);
+          return DateTime(year, month, day);
       }
       return null;
     } catch (e) {
@@ -645,17 +645,17 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_month),
                           onPressed: () async {
-                            final date = await showDatePicker(
-                              context: context,
+                        final date = await showDatePicker(
+                          context: context,
                               initialDate: _parseDate(_dobController.text) ??
                                   DateTime.now(),
-                              firstDate: DateTime(1900),
-                              lastDate: DateTime.now(),
-                            );
-                            if (date != null) {
-                              _dobController.text = _formatDate(date);
-                            }
-                          },
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (date != null) {
+                          _dobController.text = _formatDate(date);
+                        }
+                      },
                         ),
                       ),
                       readOnly: false,

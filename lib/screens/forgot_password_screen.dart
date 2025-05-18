@@ -378,14 +378,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             },
           ),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                   const SizedBox(height: 40),
                   // Company Logo
                   Container(
@@ -410,47 +410,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  const Text(
+                const SizedBox(height: 40),
+                const Text(
                     'Enter your registered mobile number to reset your password',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
                   const SizedBox(height: 20),
-                  // Mobile Number Field
-                  TextFormField(
-                    controller: _mobileController,
-                    keyboardType: TextInputType.phone,
+                // Mobile Number Field
+                TextFormField(
+                  controller: _mobileController,
+                  keyboardType: TextInputType.phone,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                     ],
-                    decoration: InputDecoration(
-                      labelText: 'Mobile Number',
-                      prefixIcon: const Icon(Icons.phone),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  decoration: InputDecoration(
+                    labelText: 'Mobile Number',
+                    prefixIcon: const Icon(Icons.phone),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your mobile number';
-                      }
-                      if (value.length != 10) {
-                        return 'Please enter a valid 10-digit mobile number';
-                      }
-                      return null;
-                    },
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your mobile number';
+                    }
+                    if (value.length != 10) {
+                      return 'Please enter a valid 10-digit mobile number';
+                    }
+                    return null;
+                  },
+                ),
                   const SizedBox(height: 20),
                   // Submit Button
-                  ElevatedButton(
+                ElevatedButton(
                     onPressed: _isLoading ? null : _handleForgotPassword,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                  ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,
@@ -462,14 +462,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                           )
                         : const Text('Reset Password'),
-                  ),
-                  const SizedBox(height: 20),
-                  // Back to Login Link
-                  TextButton(
+                ),
+                const SizedBox(height: 20),
+                // Back to Login Link
+                TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Back to Login'),
-                  ),
-                ],
+                  child: const Text('Back to Login'),
+                ),
+              ],
               ),
             ),
           ),

@@ -7,6 +7,8 @@ import 'screens/register_screen.dart';
 import 'screens/otp_verification_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/admin/master_admin_panel.dart';
+import 'screens/admin/admin_panel.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -45,6 +47,8 @@ class MyApp extends StatelessWidget {
               phoneNumber: '',
               accessToken: '',
             ),
+        '/master-admin': (context) => const MasterAdminPanel(),
+        '/admin': (context) => const AdminPanel(),
       },
     );
   }

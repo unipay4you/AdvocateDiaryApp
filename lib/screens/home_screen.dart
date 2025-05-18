@@ -389,7 +389,38 @@ class HomeScreen extends StatelessWidget {
       cases,
       userData,
       count,
-    );
+      '', // Pass empty string as filter since this is from home screen
+    ).then((_) async {
+      print('Test 1: Date update dialog closed');
+      print('Test 2: Refreshing data');
+      try {
+        final freshData = await _fetchFreshData();
+        print('Test 3: Fresh data received successfully');
+        if (context.mounted) {
+          print('Test 4: Navigating to new HomeScreen with fresh data');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(
+                userData: freshData['userData'],
+                cases: freshData['cases'],
+                count: freshData['count'],
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        print('Test 5: Error refreshing data: $e');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error refreshing data: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<Map<String, dynamic>> _fetchFreshData() async {
@@ -700,6 +731,28 @@ class HomeScreen extends StatelessWidget {
               onTap: () {
                 print('Test 9: Home menu item tapped');
                 Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.admin_panel_settings, color: Colors.black),
+              title: const Text('Master Admin Panel',
+                  style: TextStyle(color: Colors.black)),
+              onTap: () {
+                print('Master Admin Panel menu item tapped');
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/master-admin');
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.settings_applications, color: Colors.black),
+              title: const Text('Admin Panel',
+                  style: TextStyle(color: Colors.black)),
+              onTap: () {
+                print('Admin Panel menu item tapped');
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/admin');
               },
             ),
             ListTile(
@@ -1163,8 +1216,18 @@ class HomeScreen extends StatelessWidget {
                             filter = 'date_awaited';
                             break;
                           case 'All Cases':
-                            filter = '';
-                            break;
+                            print('\n=== All Cases Container Clicked ===');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FilteredCasesScreen(
+                                  filter: '',
+                                  userData: userData,
+                                  count: count,
+                                ),
+                              ),
+                            );
+                            return; // Return early to prevent navigation
                         }
                         Navigator.push(
                           context,
