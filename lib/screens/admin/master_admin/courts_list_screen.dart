@@ -428,91 +428,344 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
     }
   }
 
-  void _showAddCourtDialog() {
+  void _showAddCourtDialog() async {
+    String? selectedState;
+    String? selectedDistrict;
+    String? selectedCourtType;
+    final courtNameController = TextEditingController();
+    final courtNumberController = TextEditingController();
+    bool isLoading = false;
+
+    // Load states, districts, and court types before showing dialog
+    try {
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+
+      // Fetch districts (which includes states data)
+      final districtsResponse = await http.get(
+        Uri.parse('${AppConfig.baseUrl}getdistrict/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (districtsResponse.statusCode == 200) {
+        final List<dynamic> data = json.decode(districtsResponse.body);
+
+        // Use Map to ensure distinct states by ID
+        final Map<int, Map<String, dynamic>> uniqueStatesMap = {};
+        final List<Map<String, dynamic>> districts = [];
+
+        for (var item in data) {
+          // Add state if not already present (using ID as key)
+          if (item['state'] != null) {
+            final stateId = item['state']['id'];
+            if (!uniqueStatesMap.containsKey(stateId)) {
+              uniqueStatesMap[stateId] = {
+                'id': stateId,
+                'name': item['state']['state'],
+              };
+            }
+          }
+
+          // Add district with its state reference
+          districts.add({
+            'id': item['id'],
+            'name': item['district'],
+            'state_id': item['state']['id'],
+          });
+        }
+
+        // Sort states alphabetically without case sensitivity
+        final sortedStates = uniqueStatesMap.values.toList()
+          ..sort((a, b) => a['name']
+              .toString()
+              .toLowerCase()
+              .compareTo(b['name'].toString().toLowerCase()));
+
+        // Sort districts alphabetically without case sensitivity
+        districts.sort((a, b) => a['name']
+            .toString()
+            .toLowerCase()
+            .compareTo(b['name'].toString().toLowerCase()));
+
+        _states = sortedStates;
+        _districts = districts;
+      }
+
+      // Fetch court types
+      final courtTypesResponse = await http.get(
+        Uri.parse('${AppConfig.baseUrl}getcourttype/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (courtTypesResponse.statusCode == 200) {
+        final List<dynamic> courtTypesData =
+            json.decode(courtTypesResponse.body);
+        // Sort court types alphabetically without case sensitivity
+        final sortedCourtTypes = courtTypesData
+            .map((type) => {
+                  'id': type['id'],
+                  'name': type['court_type'],
+                })
+            .toList()
+          ..sort((a, b) => a['name']
+              .toString()
+              .toLowerCase()
+              .compareTo(b['name'].toString().toLowerCase()));
+
+        _courtTypes = sortedCourtTypes;
+      }
+    } catch (e) {
+      print('\n=== Error loading filter data ===');
+      print('Error details: $e');
+      print('=== End Error Log ===\n');
+    }
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Add New Court'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Court Name',
-                  border: OutlineInputBorder(),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // Get districts for selected state
+            List<Map<String, dynamic>> filteredDistricts = [];
+            if (selectedState != null && selectedState != 'All') {
+              final selectedStateId = _states
+                  .firstWhere((state) => state['name'] == selectedState)['id'];
+              filteredDistricts = _districts
+                  .where((district) => district['state_id'] == selectedStateId)
+                  .toList();
+            } else {
+              filteredDistricts = _districts;
+            }
+
+            return AlertDialog(
+              title: const Text('Add New Court'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // State Dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedState,
+                      decoration: const InputDecoration(
+                        labelText: 'State *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _states.map((state) {
+                        return DropdownMenuItem<String>(
+                          value: state['name'],
+                          child: Text(state['name']),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedState = newValue;
+                          // Reset district when state changes
+                          selectedDistrict = null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // District Dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedDistrict,
+                      decoration: const InputDecoration(
+                        labelText: 'District *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: filteredDistricts.map((district) {
+                        return DropdownMenuItem<String>(
+                          value: district['name'],
+                          child: Text(district['name']),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedDistrict = newValue;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Court Type Dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedCourtType,
+                      decoration: const InputDecoration(
+                        labelText: 'Court Type *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _courtTypes.map((type) {
+                        return DropdownMenuItem<String>(
+                          value: type['name'],
+                          child: Text(type['name']),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedCourtType = newValue;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Court Name TextField
+                    TextField(
+                      controller: courtNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Court Name *',
+                        border: OutlineInputBorder(),
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Court Number TextField
+                    TextField(
+                      controller: courtNumberController,
+                      decoration: const InputDecoration(
+                        labelText: 'Court Number *',
+                        border: OutlineInputBorder(),
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Court Number',
-                  border: OutlineInputBorder(),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'Court Type',
-                  border: OutlineInputBorder(),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          // Validate all fields
+                          if (selectedState == null ||
+                              selectedDistrict == null ||
+                              selectedCourtType == null ||
+                              courtNameController.text.trim().isEmpty ||
+                              courtNumberController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('All fields are mandatory'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() {
+                            isLoading = true;
+                          });
+
+                          try {
+                            final apiService = ApiService();
+                            final token = await apiService.getAccessToken();
+
+                            // Get IDs for the selected values
+                            final stateId = _states.firstWhere((state) =>
+                                state['name'] == selectedState)['id'];
+                            final districtId = _districts.firstWhere(
+                                (district) =>
+                                    district['name'] == selectedDistrict)['id'];
+                            final courtTypeId = _courtTypes.firstWhere((type) =>
+                                type['name'] == selectedCourtType)['id'];
+
+                            final response = await http.post(
+                              Uri.parse(
+                                  '${AppConfig.baseUrl}superadmin/courts/add/'),
+                              headers: {
+                                'Authorization': 'Bearer $token',
+                                'Content-Type': 'application/json',
+                              },
+                              body: json.encode({
+                                'district_id': districtId,
+                                'state_id': stateId,
+                                'court_name': courtNameController.text
+                                    .trim()
+                                    .toUpperCase(),
+                                'court_type': courtTypeId,
+                                'court_no': courtNumberController.text
+                                    .trim()
+                                    .toUpperCase(),
+                              }),
+                            );
+
+                            print('\n=== Add Court API Response ===');
+                            print('Status Code: ${response.statusCode}');
+                            print('Response Body: ${response.body}');
+                            print('=== End Response ===\n');
+
+                            if (!context.mounted) return;
+
+                            // Parse response
+                            final responseData = json.decode(response.body);
+
+                            if (responseData['status'] == 200) {
+                              // Show success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Court added successfully'),
+                                  backgroundColor: Colors.green,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+
+                              // Refresh the courts list
+                              _fetchData();
+                              // Close dialog
+                              Navigator.pop(context);
+                            } else {
+                              // Show error message from response
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(responseData['message'] ??
+                                      'Something went wrong'),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                              // Keep all form data as is for retry
+                            }
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          } finally {
+                            if (context.mounted) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                            }
+                          }
+                        },
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Add Court'),
                 ),
-                items: _courtTypes.map((type) {
-                  return DropdownMenuItem<String>(
-                    value: type['name'],
-                    child: Text(type['name']),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  // Handle court type selection
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'State',
-                  border: OutlineInputBorder(),
-                ),
-                items: _states.map((state) {
-                  return DropdownMenuItem<String>(
-                    value: state['name'],
-                    child: Text(state['name']),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  // Handle state selection
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'District',
-                  border: OutlineInputBorder(),
-                ),
-                items: _districts.map((district) {
-                  return DropdownMenuItem<String>(
-                    value: district['name'],
-                    child: Text(district['name']),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  // Handle district selection
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Implement court creation
-                Navigator.pop(context);
-              },
-              child: const Text('Add Court'),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
