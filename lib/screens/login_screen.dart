@@ -91,20 +91,36 @@ class _LoginScreenState extends State<LoginScreen> {
         _mobileController.text,
         _passwordController.text,
       );
-      print('Test 5: Login API response: ${response['status']}');
+      print('\n=== Login API Response ===');
+      print('Status: ${response['status']}');
+      print('Message: ${response['message']}');
+      print('Data: ${response['data']}');
+      print('Access Token: ${response['data']?['access_token']}');
+      print('=== End Login API Response ===\n');
 
       if (response['status'] == 200) {
-        print('Test 6: Login successful, navigating to OTP verification');
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OtpVerificationScreen(
-                phoneNumber: _mobileController.text,
-                accessToken: response['data']['access_token'],
+        print('Test 6: Login successful');
+
+        // Check if OTP verification is required
+        if (response['data'] != null &&
+            response['data']['requires_otp'] == true) {
+          print('Test 7: OTP verification required, navigating to OTP screen');
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OtpVerificationScreen(
+                  phoneNumber: _mobileController.text,
+                  accessToken: response['data']?['access_token'] ?? '',
+                ),
               ),
-            ),
-          );
+            );
+          }
+        } else {
+          print('Test 7: No OTP required, proceeding to home');
+          if (mounted) {
+            _navigateToHome();
+          }
         }
       } else {
         print('Test 7: Login failed with status: ${response['status']}');

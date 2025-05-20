@@ -64,15 +64,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   bool _validatePassword(String value) {
-    // Password must be at least 8 characters long and contain:
-    // - At least one uppercase letter
-    // - At least one lowercase letter
-    // - At least one number
-    // - At least one special character
-    final passwordRegex = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$',
-    );
-    return passwordRegex.hasMatch(value);
+    // Password must be at least 6 characters long
+    return value.length >= 6;
   }
 
   Future<void> _handleChangePassword() async {
@@ -256,8 +249,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your new password';
                       }
-                      if (!_validatePassword(value)) {
-                        return 'Password must be at least 8 characters long and contain:\n- At least one uppercase letter\n- At least one lowercase letter\n- At least one number\n- At least one special character';
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters long';
                       }
                       return null;
                     },
@@ -335,4 +328,3 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 }
- 

@@ -7,7 +7,7 @@ import 'screens/register_screen.dart';
 import 'screens/otp_verification_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/change_password_screen.dart';
-import 'screens/admin/master_admin_panel.dart';
+import 'screens/admin/master_admin/master_admin_panel.dart';
 import 'screens/admin/admin_panel.dart';
 import 'services/api_service.dart';
 

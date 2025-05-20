@@ -350,13 +350,15 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
             },
           );
         } else {
+          // Show the specific error message from the API response
           showDialog(
             context: context,
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text('Error'),
-                content:
-                    Text(response['message'] ?? 'Failed to update profile'),
+                content: Text(response['error'] ??
+                    response['message'] ??
+                    'Failed to update profile'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -397,9 +399,42 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
 
   Future<void> _pickImage() async {
     try {
+      // Show options dialog
+      final ImageSource? source = await showDialog<ImageSource>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Image Source'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      if (source == null) return;
+
       final XFile? pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 50,
+        source: source,
+        imageQuality:
+            source == ImageSource.camera ? 30 : 50, // Lower quality for camera
+        maxWidth:
+            source == ImageSource.camera ? 800 : null, // Limit width for camera
+        maxHeight: source == ImageSource.camera
+            ? 800
+            : null, // Limit height for camera
       );
 
       if (pickedFile != null) {
@@ -417,14 +452,19 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
           return;
         }
 
-        // Check file size (50KB = 50 * 1024 bytes)
+        // Check file size with different limits for camera and gallery
         final file = File(pickedFile.path);
         final fileSize = await file.length();
-        if (fileSize > 50 * 1024) {
+        final maxSize = source == ImageSource.camera
+            ? 200 * 1024
+            : 50 * 1024; // 200KB for camera, 50KB for gallery
+
+        if (fileSize > maxSize) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Image size should be less than 50KB'),
+              SnackBar(
+                content: Text(
+                    'Image size should be less than ${source == ImageSource.camera ? "200KB" : "50KB"}'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -463,7 +503,7 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
         final day = int.parse(parts[0]);
         final month = int.parse(parts[1]);
         final year = int.parse(parts[2]);
-          return DateTime(year, month, day);
+        return DateTime(year, month, day);
       }
       return null;
     } catch (e) {
@@ -645,17 +685,17 @@ class _ProfileUpdateScreenState extends State<ProfileUpdateScreen> {
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_month),
                           onPressed: () async {
-                        final date = await showDatePicker(
-                          context: context,
+                            final date = await showDatePicker(
+                              context: context,
                               initialDate: _parseDate(_dobController.text) ??
                                   DateTime.now(),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (date != null) {
-                          _dobController.text = _formatDate(date);
-                        }
-                      },
+                              firstDate: DateTime(1900),
+                              lastDate: DateTime.now(),
+                            );
+                            if (date != null) {
+                              _dobController.text = _formatDate(date);
+                            }
+                          },
                         ),
                       ),
                       readOnly: false,

@@ -11,6 +11,7 @@ import 'filtered_cases_screen.dart';
 import 'add_case_screen.dart';
 import 'profile_update_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'admin/master_admin/master_admin_panel.dart';
 
 class CalendarDialog extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -734,28 +735,6 @@ class HomeScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading:
-                  const Icon(Icons.admin_panel_settings, color: Colors.black),
-              title: const Text('Master Admin Panel',
-                  style: TextStyle(color: Colors.black)),
-              onTap: () {
-                print('Master Admin Panel menu item tapped');
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/master-admin');
-              },
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.settings_applications, color: Colors.black),
-              title: const Text('Admin Panel',
-                  style: TextStyle(color: Colors.black)),
-              onTap: () {
-                print('Admin Panel menu item tapped');
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/admin');
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.person, color: Colors.black),
               title:
                   const Text('Profile', style: TextStyle(color: Colors.black)),
@@ -781,7 +760,73 @@ class HomeScreen extends StatelessWidget {
                 // TODO: Navigate to settings
               },
             ),
-            const Divider(),
+            const Divider(height: 1),
+            if (userData['is_superuser'] == true ||
+                userData['is_admin'] == true)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: const Color.fromRGBO(123, 109, 217, 0.1),
+                child: const Text(
+                  'Admin Section',
+                  style: TextStyle(
+                    color: Color.fromRGBO(123, 109, 217, 1),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (userData['is_superuser'] == true)
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: Color.fromRGBO(123, 109, 217, 1),
+                      width: 4,
+                    ),
+                  ),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.admin_panel_settings,
+                      color: Color.fromRGBO(123, 109, 217, 1)),
+                  title: const Text('Master Admin Panel',
+                      style: TextStyle(
+                        color: Color.fromRGBO(123, 109, 217, 1),
+                        fontWeight: FontWeight.bold,
+                      )),
+                  onTap: () {
+                    print('Master Admin Panel menu item tapped');
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/master-admin');
+                  },
+                ),
+              ),
+            if (userData['is_admin'] == true)
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: Color.fromRGBO(123, 109, 217, 1),
+                      width: 4,
+                    ),
+                  ),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.settings_applications,
+                      color: Color.fromRGBO(123, 109, 217, 1)),
+                  title: const Text('Admin Panel',
+                      style: TextStyle(
+                        color: Color.fromRGBO(123, 109, 217, 1),
+                        fontWeight: FontWeight.bold,
+                      )),
+                  onTap: () {
+                    print('Admin Panel menu item tapped');
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/admin');
+                  },
+                ),
+              ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.black),
               title:
