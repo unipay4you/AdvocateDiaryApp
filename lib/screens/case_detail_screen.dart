@@ -384,6 +384,8 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
                                   'N/A'),
                           _buildDetailRow('Reference',
                               widget.caseData['sub_advocate'] ?? 'N/A'),
+                          _buildDetailRow('Advocate Mobile',
+                              widget.caseData['advocate_mobile'] ?? 'N/A'),
                         ],
                       ),
                       const SizedBox(height: 4),

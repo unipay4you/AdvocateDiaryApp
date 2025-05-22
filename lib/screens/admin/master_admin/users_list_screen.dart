@@ -60,12 +60,32 @@ class _UsersListScreenState extends State<UsersListScreen> {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
       appBar: AppBar(
-        title: const Text(
-          'Users List',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            const Text(
+              'Users List',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(123, 109, 217, 1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_filteredUsers.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
         elevation: 0,

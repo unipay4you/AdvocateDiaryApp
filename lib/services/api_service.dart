@@ -13,7 +13,14 @@ class ApiService {
 
   static const String baseURL =
       AppConfig.baseAPI; // Using baseAPI without /api/
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
   String? _userProfileImage;
 
   String? get userProfileImage => _userProfileImage;

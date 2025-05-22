@@ -555,7 +555,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedState,
                       decoration: const InputDecoration(
-                        labelText: 'State *',
+                        labelText: 'State',
                         border: OutlineInputBorder(),
                       ),
                       items: _states.map((state) {
@@ -578,7 +578,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedDistrict,
                       decoration: const InputDecoration(
-                        labelText: 'District *',
+                        labelText: 'District',
                         border: OutlineInputBorder(),
                       ),
                       items: filteredDistricts.map((district) {
@@ -599,7 +599,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedCourtType,
                       decoration: const InputDecoration(
-                        labelText: 'Court Type *',
+                        labelText: 'Court Type',
                         border: OutlineInputBorder(),
                       ),
                       items: _courtTypes.map((type) {
@@ -620,7 +620,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                     TextField(
                       controller: courtNameController,
                       decoration: const InputDecoration(
-                        labelText: 'Court Name *',
+                        labelText: 'Court Name',
                         border: OutlineInputBorder(),
                       ),
                       textCapitalization: TextCapitalization.characters,
@@ -631,7 +631,7 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
                     TextField(
                       controller: courtNumberController,
                       decoration: const InputDecoration(
-                        labelText: 'Court Number *',
+                        labelText: 'Court Number',
                         border: OutlineInputBorder(),
                       ),
                       textCapitalization: TextCapitalization.characters,
@@ -781,12 +781,32 @@ class _CourtsListScreenState extends State<CourtsListScreen> {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
       appBar: AppBar(
-        title: const Text(
-          'Courts List',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            const Text(
+              'Courts List',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(123, 109, 217, 1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_filteredCourts.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
         elevation: 0,

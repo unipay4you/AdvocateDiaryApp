@@ -74,7 +74,7 @@ class CaseDetailScreen extends StatelessWidget {
                     _buildInfoRow(
                         'Advocate',
                         caseData['advocate'] is Map
-                            ? caseData['advocate']['user_name'] ?? 'N/A'
+                            ? '${caseData['advocate']['user_name'] ?? 'N/A'} (${caseData['advocate']['phone_number'] ?? 'N/A'})'
                             : 'N/A'),
                     const Divider(),
                     _buildInfoRow('Client', caseData['client_name'] ?? 'N/A'),

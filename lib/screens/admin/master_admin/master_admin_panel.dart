@@ -125,16 +125,47 @@ class _MasterAdminPanelState extends State<MasterAdminPanel> {
         }).length;
 
         // Count undated cases (cases with next_date less than today)
-        final undatedCases = casesList.where((case_) {
-          if (case_['next_date'] == null) return false;
+        print('\n=== Debugging Undated Cases ===');
+        print('Today: ${DateTime.now()}');
+        print('Total cases to check: ${casesList.length}');
+
+        int undatedCount = 0;
+        for (var case_ in casesList) {
+          print('\nChecking case: ${case_['case_no']}');
+          print('Is active: ${case_['is_active']}');
+          print('Next date: ${case_['next_date']}');
+
+          // Skip if case is not active
+          if (case_['is_active'] != true) {
+            print('Skipping - Case is not active');
+            continue;
+          }
+
+          if (case_['next_date'] == null) {
+            print('Skipping - No next date set');
+            continue;
+          }
+
           final nextDate = DateTime.parse(case_['next_date']);
           final today = DateTime.now();
-          // Set time to start of day for accurate date comparison
           final todayStart = DateTime(today.year, today.month, today.day);
           final nextDateStart =
               DateTime(nextDate.year, nextDate.month, nextDate.day);
-          return nextDateStart.isBefore(todayStart);
-        }).length;
+
+          print('Next date parsed: $nextDateStart');
+          print('Today start: $todayStart');
+
+          if (nextDateStart.isBefore(todayStart)) {
+            print('Case is undated - Next date is before today');
+            undatedCount++;
+          } else {
+            print('Case is not undated - Next date is not before today');
+          }
+        }
+
+        final undatedCases = undatedCount;
+        print('\nTotal undated cases found: $undatedCases');
+        print('=== End Undated Cases Debug ===\n');
 
         // Count running cases (is_active true)
         final runningCases = casesList.where((case_) {

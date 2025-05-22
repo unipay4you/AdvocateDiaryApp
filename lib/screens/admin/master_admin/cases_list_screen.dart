@@ -19,6 +19,8 @@ class _CasesListScreenState extends State<CasesListScreen> {
   List<dynamic> _filteredCases = [];
   bool _isLoading = false;
   String _searchQuery = '';
+  String _selectedStatus = 'All';
+  String _selectedDate = 'All';
 
   @override
   void initState() {
@@ -34,16 +36,167 @@ class _CasesListScreenState extends State<CasesListScreen> {
     }
   }
 
+  void _applyFilters() {
+    setState(() {
+      print('\n=== Debug Filter ===');
+      print('Selected Status: $_selectedStatus');
+      print('Total cases before filter: ${widget.cases.length}');
+
+      _filteredCases = widget.cases.where((case_) {
+        bool statusMatch = true;
+        bool dateMatch = true;
+
+        // Status filter
+        if (_selectedStatus != 'All') {
+          if (_selectedStatus == 'Active') {
+            statusMatch = case_['is_active'] == true;
+          } else if (_selectedStatus == 'Closed') {
+            print('\nChecking case for Closed status:');
+            print('Case No: ${case_['case_no']}');
+            print('is_active value: ${case_['is_active']}');
+            print('is_decided value: ${case_['is_decided']}');
+            print('last_date value: ${case_['last_date']}');
+            // A case is closed if it's not active
+            statusMatch = case_['is_active'] != true;
+            print('Status match: $statusMatch');
+          } else if (_selectedStatus == 'Undated') {
+            if (case_['next_date'] == null || case_['is_active'] != true) {
+              statusMatch = false;
+            } else {
+              final nextDate = DateTime.parse(case_['next_date']);
+              final today = DateTime.now();
+              final todayStart = DateTime(today.year, today.month, today.day);
+              final nextDateStart =
+                  DateTime(nextDate.year, nextDate.month, nextDate.day);
+              statusMatch = nextDateStart.isBefore(todayStart);
+            }
+          }
+        }
+
+        // Date filter
+        if (_selectedDate != 'All' && case_['next_date'] != null) {
+          final nextDate = DateTime.parse(case_['next_date']);
+          final today = DateTime.now();
+          final todayStart = DateTime(today.year, today.month, today.day);
+          final nextDateStart =
+              DateTime(nextDate.year, nextDate.month, nextDate.day);
+
+          if (_selectedDate == 'Today') {
+            dateMatch = nextDateStart.isAtSameMomentAs(todayStart);
+          } else if (_selectedDate == 'This Week') {
+            final weekStart =
+                todayStart.subtract(Duration(days: today.weekday - 1));
+            final weekEnd = weekStart.add(const Duration(days: 7));
+            dateMatch = nextDateStart.isAfter(weekStart) &&
+                nextDateStart.isBefore(weekEnd);
+          } else if (_selectedDate == 'This Month') {
+            final monthStart = DateTime(today.year, today.month, 1);
+            final monthEnd = DateTime(today.year, today.month + 1, 0);
+            dateMatch = nextDateStart.isAfter(monthStart) &&
+                nextDateStart.isBefore(monthEnd);
+          }
+        }
+
+        return statusMatch && dateMatch;
+      }).toList();
+
+      print('\nFiltered cases count: ${_filteredCases.length}');
+      print('=== End Debug Filter ===\n');
+    });
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Filter Cases'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Status Filter
+                  DropdownButtonFormField<String>(
+                    value: _selectedStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['All', 'Active', 'Closed', 'Undated']
+                        .map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedStatus = newValue;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Date Filter
+                  DropdownButtonFormField<String>(
+                    value: _selectedDate,
+                    decoration: const InputDecoration(
+                      labelText: 'Date',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['All', 'Today', 'This Week', 'This Month']
+                        .map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedDate = newValue;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _applyFilters();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _filterCases(String query) {
     setState(() {
       _searchQuery = query;
       if (query.isEmpty) {
-        _filteredCases = widget.cases;
+        _applyFilters(); // Apply current filters when search is cleared
       } else {
         _filteredCases = widget.cases.where((case_) {
           final searchLower = query.toLowerCase();
-
-          // Search in all available fields
           final fields = [
             case_['case_no']?.toString() ?? '',
             case_['case_year']?.toString() ?? '',
@@ -65,7 +218,6 @@ class _CasesListScreenState extends State<CasesListScreen> {
             case_['client_name']?.toString() ?? '',
           ];
 
-          // Check if any field contains the search query
           return fields
               .any((field) => field.toLowerCase().contains(searchLower));
         }).toList();
@@ -73,158 +225,37 @@ class _CasesListScreenState extends State<CasesListScreen> {
     });
   }
 
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        String selectedStatus = 'All';
-        String selectedDate = 'All';
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Filter Cases'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Status Filter
-                  DropdownButtonFormField<String>(
-                    value: selectedStatus,
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['All', 'Active', 'Closed', 'Undated']
-                        .map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          selectedStatus = newValue;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Date Filter
-                  DropdownButtonFormField<String>(
-                    value: selectedDate,
-                    decoration: const InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ['All', 'Today', 'This Week', 'This Month']
-                        .map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          selectedDate = newValue;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    // Apply filters
-                    setState(() {
-                      _filteredCases = widget.cases.where((case_) {
-                        bool statusMatch = true;
-                        bool dateMatch = true;
-
-                        // Status filter
-                        if (selectedStatus != 'All') {
-                          if (selectedStatus == 'Active') {
-                            statusMatch = case_['is_active'] == true;
-                          } else if (selectedStatus == 'Closed') {
-                            statusMatch = case_['is_decided'] == true;
-                          } else if (selectedStatus == 'Undated') {
-                            if (case_['next_date'] == null) {
-                              statusMatch = true;
-                            } else {
-                              final nextDate =
-                                  DateTime.parse(case_['next_date']);
-                              final today = DateTime.now();
-                              final todayStart =
-                                  DateTime(today.year, today.month, today.day);
-                              final nextDateStart = DateTime(
-                                  nextDate.year, nextDate.month, nextDate.day);
-                              statusMatch = nextDateStart.isBefore(todayStart);
-                            }
-                          }
-                        }
-
-                        // Date filter
-                        if (selectedDate != 'All' &&
-                            case_['next_date'] != null) {
-                          final nextDate = DateTime.parse(case_['next_date']);
-                          final today = DateTime.now();
-                          final todayStart =
-                              DateTime(today.year, today.month, today.day);
-                          final nextDateStart = DateTime(
-                              nextDate.year, nextDate.month, nextDate.day);
-
-                          if (selectedDate == 'Today') {
-                            dateMatch =
-                                nextDateStart.isAtSameMomentAs(todayStart);
-                          } else if (selectedDate == 'This Week') {
-                            final weekStart = todayStart
-                                .subtract(Duration(days: today.weekday - 1));
-                            final weekEnd =
-                                weekStart.add(const Duration(days: 7));
-                            dateMatch = nextDateStart.isAfter(weekStart) &&
-                                nextDateStart.isBefore(weekEnd);
-                          } else if (selectedDate == 'This Month') {
-                            final monthStart =
-                                DateTime(today.year, today.month, 1);
-                            final monthEnd =
-                                DateTime(today.year, today.month + 1, 0);
-                            dateMatch = nextDateStart.isAfter(monthStart) &&
-                                nextDateStart.isBefore(monthEnd);
-                          }
-                        }
-
-                        return statusMatch && dateMatch;
-                      }).toList();
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Apply'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
       appBar: AppBar(
-        title: const Text(
-          'Cases List',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            const Text(
+              'Cases List',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(123, 109, 217, 1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_filteredCases.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: const Color.fromRGBO(253, 255, 247, 1),
         elevation: 0,
@@ -285,17 +316,65 @@ class _CasesListScreenState extends State<CasesListScreen> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    OutlinedButton.icon(
-                      onPressed: _showFilterDialog,
+                    PopupMenuButton<String>(
                       icon: const Icon(Icons.filter_list),
-                      label: const Text('Filter'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      itemBuilder: (BuildContext context) => [
+                        const PopupMenuItem<String>(
+                          value: 'All',
+                          child: Row(
+                            children: [
+                              Icon(Icons.all_inclusive, size: 20),
+                              SizedBox(width: 8),
+                              Text('All'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'Active',
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle,
+                                  size: 20,
+                                  color: Color.fromRGBO(76, 175, 80, 1)),
+                              SizedBox(width: 8),
+                              Text('Active'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'Closed',
+                          child: Row(
+                            children: [
+                              Icon(Icons.cancel,
+                                  size: 20,
+                                  color: Color.fromRGBO(244, 67, 54, 1)),
+                              SizedBox(width: 8),
+                              Text('Closed'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'Undated',
+                          child: Row(
+                            children: [
+                              Icon(Icons.event_busy,
+                                  size: 20,
+                                  color: Color.fromRGBO(255, 152, 0, 1)),
+                              SizedBox(width: 8),
+                              Text('Undated'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (String value) {
+                        setState(() {
+                          _selectedStatus = value;
+                          _applyFilters();
+                        });
+                      },
                     ),
                   ],
                 ),

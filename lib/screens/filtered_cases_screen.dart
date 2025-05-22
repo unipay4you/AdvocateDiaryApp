@@ -764,8 +764,29 @@ class _FilteredCasesScreenState extends State<FilteredCasesScreen> {
                                             content: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                                  CrossAxisAlignment.center,
                                               children: [
+                                                const Text(
+                                                  'Case:',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black87,
+                                                    decoration: TextDecoration
+                                                        .underline,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  '${caseData['petitioner']}\nvs\n${caseData['respondent']}',
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 16),
                                                 const Text(
                                                   'Are you sure you want to update the next date to:',
                                                   style:
