@@ -4,10 +4,12 @@ import 'user_detail_screen.dart';
 
 class UsersListScreen extends StatefulWidget {
   final List<dynamic> users;
+  final List<dynamic> cases;
 
   const UsersListScreen({
     Key? key,
     required this.users,
+    required this.cases,
   }) : super(key: key);
 
   @override
@@ -19,6 +21,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
   late List<dynamic> _filteredUsers;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _showOnlyActive = false;
 
   @override
   void initState() {
@@ -46,6 +49,19 @@ class _UsersListScreenState extends State<UsersListScreen> {
           });
         }).toList();
       }
+
+      // Apply active filter if enabled
+      if (_showOnlyActive) {
+        _filteredUsers =
+            _filteredUsers.where((user) => user['is_active'] == true).toList();
+      }
+    });
+  }
+
+  void _toggleActiveFilter() {
+    setState(() {
+      _showOnlyActive = !_showOnlyActive;
+      _filterUsers(_searchQuery); // Reapply current search with new filter
     });
   }
 
@@ -139,15 +155,30 @@ class _UsersListScreenState extends State<UsersListScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          // TODO: Implement filter by status
-                        },
-                        icon: const Icon(Icons.filter_list),
-                        label: const Text('Filter'),
+                        onPressed: _toggleActiveFilter,
+                        icon: Icon(
+                          Icons.filter_list,
+                          color: _showOnlyActive
+                              ? const Color.fromRGBO(123, 109, 217, 1)
+                              : null,
+                        ),
+                        label: Text(
+                          _showOnlyActive ? 'Active Only' : 'Filter',
+                          style: TextStyle(
+                            color: _showOnlyActive
+                                ? const Color.fromRGBO(123, 109, 217, 1)
+                                : null,
+                          ),
+                        ),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
+                          ),
+                          side: BorderSide(
+                            color: _showOnlyActive
+                                ? const Color.fromRGBO(123, 109, 217, 1)
+                                : Colors.grey,
                           ),
                         ),
                       ),
@@ -194,7 +225,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                 const Color.fromRGBO(123, 109, 217, 1)
                                     .withOpacity(0.1),
                             backgroundImage: NetworkImage(
-                                'http://192.168.1.2:8000${user['user_profile_image']}'),
+                                '${AppConfig.mediaUrl}${user['user_profile_image']}'),
                             onBackgroundImageError: (exception, stackTrace) {
                               if (user['phone_number'] == '7611999997') {
                                 print(
@@ -203,7 +234,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                                 print(
                                     'Image Path: ${user['user_profile_image']}');
                                 print(
-                                    'Full URL: http://192.168.1.2:8000${user['user_profile_image']}');
+                                    'Full URL: ${AppConfig.mediaUrl}${user['user_profile_image']}');
                                 print('Error: $exception');
                                 print('=== End Image Path Debug ===\n');
                               }
@@ -230,6 +261,110 @@ class _UsersListScreenState extends State<UsersListScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: (user['is_active'] == true
+                                        ? Colors.green
+                                        : Colors.red)
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: user['is_active'] == true
+                                      ? Colors.green
+                                      : Colors.red,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    user['is_active'] == true
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    size: 12,
+                                    color: user['is_active'] == true
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    user['is_active'] == true
+                                        ? 'Active'
+                                        : 'Inactive',
+                                    style: TextStyle(
+                                      color: user['is_active'] == true
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color.fromRGBO(123, 109, 217, 1)
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color.fromRGBO(123, 109, 217, 1),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.gavel,
+                                    size: 12,
+                                    color: Color.fromRGBO(123, 109, 217, 1),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Builder(builder: (context) {
+                                    final activeCases =
+                                        widget.cases.where((case_) {
+                                      final isActive =
+                                          case_['is_active'] == true;
+                                      final advocateId =
+                                          case_['advocate']?['id']?.toString();
+                                      final userId = user['id']?.toString();
+
+                                      print('\n=== Case Counting Debug ===');
+                                      print('User ID: $userId');
+                                      print('Case Advocate ID: $advocateId');
+                                      print('Is Active: $isActive');
+                                      print(
+                                          'Case Details: ${case_['case_no']}');
+                                      print('=== End Debug ===\n');
+
+                                      return isActive && advocateId == userId;
+                                    }).length;
+
+                                    return Text(
+                                      '$activeCases Cases',
+                                      style: const TextStyle(
+                                        color: Color.fromRGBO(123, 109, 217, 1),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           'Email: ${user['email'] ?? 'No Email'}',
                           style: TextStyle(
@@ -254,12 +389,16 @@ class _UsersListScreenState extends State<UsersListScreen> {
                               color: Colors.grey[600],
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              '${user['user_state']?['state'] ?? 'No State'}, ${user['user_district']?['district'] ?? 'No District'}',
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: Text(
+                                '${user['user_state']?['state'] ?? 'No State'}, ${user['user_district']?['district'] ?? 'No District'}',
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -319,6 +458,7 @@ class _UsersListScreenState extends State<UsersListScreen> {
                           MaterialPageRoute(
                             builder: (context) => UserDetailScreen(
                               user: user,
+                              cases: widget.cases,
                             ),
                           ),
                         );

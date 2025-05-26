@@ -452,31 +452,49 @@ class _CasesListScreenState extends State<CasesListScreen> {
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        size: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Last: ${case_['last_date'] != null ? DateTime.parse(case_['last_date'].toString()).toString().split(' ')[0] : 'N/A'}',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Last: ${case_['last_date'] != null ? _formatDate(case_['last_date'].toString()) : 'N/A'}',
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 14,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
-                                      Icon(
-                                        Icons.calendar_today,
-                                        size: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Next: ${case_['next_date'] != null ? DateTime.parse(case_['next_date'].toString()).toString().split(' ')[0] : 'N/A'}',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Next: ${case_['next_date'] != null ? _formatDate(case_['next_date'].toString()) : 'N/A'}',
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 14,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -552,6 +570,15 @@ class _CasesListScreenState extends State<CasesListScreen> {
         builder: (context) => CaseDetailScreen(caseData: case_),
       ),
     );
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
+    } catch (e) {
+      return 'N/A';
+    }
   }
 
   @override

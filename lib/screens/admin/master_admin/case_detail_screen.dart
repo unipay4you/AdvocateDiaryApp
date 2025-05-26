@@ -53,6 +53,9 @@ class CaseDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildInfoRow(
+                        'Case ID', caseData['id']?.toString() ?? 'N/A'),
+                    const Divider(),
                     _buildInfoRow('Case Number',
                         '${caseData['case_no'] ?? 'N/A'} / ${caseData['case_year'] ?? 'N/A'}'),
                     const Divider(),

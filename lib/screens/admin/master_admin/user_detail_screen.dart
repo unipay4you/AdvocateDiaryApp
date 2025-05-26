@@ -6,10 +6,12 @@ import '../../../config/app_config.dart';
 
 class UserDetailScreen extends StatefulWidget {
   final Map<String, dynamic> user;
+  final List<dynamic> cases;
 
   const UserDetailScreen({
     Key? key,
     required this.user,
+    required this.cases,
   }) : super(key: key);
 
   @override
@@ -43,6 +45,13 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
 
   bool get _isCurrentUser {
     return _currentUser != null && _currentUser!['id'] == widget.user['id'];
+  }
+
+  int get _activeCasesCount {
+    return widget.cases.where((case_) {
+      return case_['is_active'] == true &&
+          case_['advocate']?['id']?.toString() == widget.user['id'].toString();
+    }).length;
   }
 
   Future<void> _resetPassword() async {
@@ -385,7 +394,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                         backgroundImage: widget.user['user_profile_image'] !=
                                 null
                             ? NetworkImage(
-                                'http://192.168.1.2:8000${widget.user['user_profile_image']}')
+                                '${AppConfig.mediaUrl}${widget.user['user_profile_image']}')
                             : null,
                         child: widget.user['user_profile_image'] == null
                             ? const Icon(
@@ -476,7 +485,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                 _buildSectionTitle('Professional Information'),
                 _buildInfoCard([
                   _buildInfoRow(
-                      'Advocate Registration Number',
+                      'Adv Reg. No.',
                       widget.user['advocate_registration_number'] ??
                           'Not Available'),
                   _buildInfoRow(
@@ -501,15 +510,24 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                 // Verification Status
                 _buildSectionTitle('Verification Status'),
                 _buildInfoCard([
-                  _buildVerificationRow(
-                    'Phone Verification',
-                    widget.user['is_phone_number_verified'] == true,
-                    onVerify: _verifyOTP,
-                  ),
-                  _buildVerificationRow(
-                    'Email Verification',
-                    widget.user['is_email_verified'] == true,
-                    onVerify: _verifyEmail,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildVerificationRow(
+                          'Phone',
+                          widget.user['is_phone_number_verified'] == true,
+                          onVerify: _verifyOTP,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildVerificationRow(
+                          'Email',
+                          widget.user['is_email_verified'] == true,
+                          onVerify: _verifyEmail,
+                        ),
+                      ),
+                    ],
                   ),
                 ]),
                 const SizedBox(height: 24),
@@ -540,6 +558,10 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                               .toString()
                               .split(' ')[0]
                           : 'Not Available'),
+                  _buildInfoRow(
+                    'Active Cases',
+                    _activeCasesCount.toString(),
+                  ),
                 ]),
                 const SizedBox(height: 24),
               ],
@@ -610,45 +632,52 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
 
   Widget _buildVerificationRow(String label, bool isVerified,
       {VoidCallback? onVerify}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isVerified ? Icons.check_circle : Icons.cancel,
+              color: isVerified ? Colors.green : Colors.red,
+              size: 20,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              isVerified ? 'Verified' : 'Not Verified',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isVerified ? Colors.green : Colors.red,
+              ),
+            ),
+          ],
+        ),
+        if (!isVerified && onVerify != null) ...[
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: onVerify,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Verify',
+              style: TextStyle(fontSize: 12),
             ),
           ),
-          Row(
-            children: [
-              Icon(
-                isVerified ? Icons.check_circle : Icons.cancel,
-                color: isVerified ? Colors.green : Colors.red,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isVerified ? 'Verified' : 'Not Verified',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: isVerified ? Colors.green : Colors.red,
-                ),
-              ),
-              if (!isVerified && onVerify != null) ...[
-                const SizedBox(width: 16),
-                TextButton(
-                  onPressed: onVerify,
-                  child: const Text('Verify'),
-                ),
-              ],
-            ],
-          ),
         ],
-      ),
+      ],
     );
   }
 

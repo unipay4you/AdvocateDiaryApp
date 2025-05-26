@@ -245,7 +245,7 @@ class _CalendarDialogState extends State<CalendarDialog> {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
   final List<dynamic> cases;
   final Map<String, dynamic> count;
@@ -256,6 +256,61 @@ class HomeScreen extends StatelessWidget {
     required this.cases,
     required this.count,
   }) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool mounted = true;
+  List<dynamic> stages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStages();
+  }
+
+  @override
+  void dispose() {
+    mounted = false;
+    super.dispose();
+  }
+
+  Future<void> _loadStages() async {
+    try {
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.baseUrl}stage/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['status'] == 200 && responseData['payload'] is List) {
+          if (mounted) {
+            setState(() {
+              stages = responseData['payload'];
+            });
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading stages: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _handleLogout(BuildContext context) async {
     print('\n=== Starting Logout Process ===');
@@ -387,9 +442,9 @@ class HomeScreen extends StatelessWidget {
     await showDateUpdateDialog(
       context,
       caseData,
-      cases,
-      userData,
-      count,
+      widget.cases,
+      widget.userData,
+      widget.count,
       '', // Pass empty string as filter since this is from home screen
     ).then((_) async {
       print('Test 1: Date update dialog closed');
@@ -516,28 +571,30 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     print('\n=== Home Screen Build Started ===');
     print('Test 1: User Data:');
-    print('  - User Type: ${userData['user_type']}');
-    print('  - User Name: ${userData['user_name']}');
+    print('  - User Type: ${widget.userData['user_type']}');
+    print('  - User Name: ${widget.userData['user_name']}');
     print(
-        '  - Registration Number: ${userData['advocate_registration_number']}');
-    print('  - Profile Image: ${userData['user_profile_image']}');
+        '  - Registration Number: ${widget.userData['advocate_registration_number']}');
+    print('  - Profile Image: ${widget.userData['user_profile_image']}');
 
     print('\nTest 2: Cases Count:');
-    print('  - Total Cases: ${count['total_case']}');
-    print('  - Today Cases: ${count['today_cases']}');
-    print('  - Tomorrow Cases: ${count['tommarow_cases']}');
-    print('  - Date Awaited Cases: ${count['date_awaited_case']}');
+    print('  - Total Cases: ${widget.count['total_case']}');
+    print('  - Today Cases: ${widget.count['today_cases']}');
+    print('  - Tomorrow Cases: ${widget.count['tommarow_cases']}');
+    print('  - Date Awaited Cases: ${widget.count['date_awaited_case']}');
 
     print('\nTest 3: Cases Data:');
-    print('  - Number of Cases: ${cases.length}');
-    for (var i = 0; i < cases.length; i++) {
+    print('  - Number of Cases: ${widget.cases.length}');
+    for (var i = 0; i < widget.cases.length; i++) {
       print('  Case ${i + 1}:');
-      print('    - Type: ${cases[i]['case_type']['case_type']}');
-      print('    - Number: ${cases[i]['case_no']}/${cases[i]['case_year']}');
-      print('    - Petitioner: ${cases[i]['petitioner']}');
-      print('    - Respondent: ${cases[i]['respondent']}');
-      print('    - Next Date: ${cases[i]['next_date']}');
-      print('    - Stage: ${cases[i]['stage_of_case']['stage_of_case']}');
+      print('    - Type: ${widget.cases[i]['case_type']['case_type']}');
+      print(
+          '    - Number: ${widget.cases[i]['case_no']}/${widget.cases[i]['case_year']}');
+      print('    - Petitioner: ${widget.cases[i]['petitioner']}');
+      print('    - Respondent: ${widget.cases[i]['respondent']}');
+      print('    - Next Date: ${widget.cases[i]['next_date']}');
+      print(
+          '    - Stage: ${widget.cases[i]['stage_of_case']['stage_of_case']}');
     }
 
     print('\nTest 4: Initializing carousel images');
@@ -582,7 +639,7 @@ class HomeScreen extends StatelessWidget {
     final List<Map<String, dynamic>> caseContainers = [
       {
         'title': "Today's Cases",
-        'count': count['today_cases'].toString(),
+        'count': widget.count['today_cases'].toString(),
         'color': const Color(0xFF7C4DFF),
         'icon': Icons.gavel,
         'subtitle': 'Active Cases',
@@ -593,7 +650,7 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'title': 'Tomorrow Cases',
-        'count': count['tommarow_cases'].toString(),
+        'count': widget.count['tommarow_cases'].toString(),
         'color': const Color(0xFF00BCD4),
         'icon': Icons.calendar_today,
         'subtitle': 'Scheduled',
@@ -604,7 +661,7 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'title': 'All Cases',
-        'count': count['total_case'].toString(),
+        'count': widget.count['total_case'].toString(),
         'color': const Color(0xFF4CAF50),
         'icon': Icons.folder,
         'subtitle': 'Total Cases',
@@ -615,7 +672,7 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'title': 'Date Awaited Case',
-        'count': count['date_awaited_case'].toString(),
+        'count': widget.count['date_awaited_case'].toString(),
         'color': const Color(0xFFFF9800),
         'icon': Icons.event_note,
         'subtitle': 'Pending Dates',
@@ -690,11 +747,12 @@ class HomeScreen extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 30,
                       backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-                      backgroundImage: userData['user_profile_image'] != null
-                          ? NetworkImage(_getProfileImageUrl(
-                              userData['user_profile_image']))
-                          : null,
-                      child: userData['user_profile_image'] == null
+                      backgroundImage:
+                          widget.userData['user_profile_image'] != null
+                              ? NetworkImage(_getProfileImageUrl(
+                                  widget.userData['user_profile_image']))
+                              : null,
+                      child: widget.userData['user_profile_image'] == null
                           ? const Icon(Icons.person,
                               size: 35, color: Colors.white)
                           : null,
@@ -704,14 +762,14 @@ class HomeScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 20),
                     child: Text(
-                      _capitalizeFirstLetter(userData['user_type']),
+                      _capitalizeFirstLetter(widget.userData['user_type']),
                       style: const TextStyle(color: Colors.black, fontSize: 18),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(left: 20),
                     child: Text(
-                      _capitalizeFirstLetter(userData['user_name']),
+                      _capitalizeFirstLetter(widget.userData['user_name']),
                       style: const TextStyle(color: Colors.black),
                     ),
                   ),
@@ -719,7 +777,8 @@ class HomeScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 20),
                     child: Text(
                       _capitalizeFirstLetter(
-                          userData['advocate_registration_number'] ?? ''),
+                          widget.userData['advocate_registration_number'] ??
+                              ''),
                       style: const TextStyle(color: Colors.black),
                     ),
                   ),
@@ -745,7 +804,7 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ProfileUpdateScreen(
-                      userData: userData,
+                      userData: widget.userData,
                     ),
                   ),
                 );
@@ -761,8 +820,8 @@ class HomeScreen extends StatelessWidget {
               },
             ),
             const Divider(height: 1),
-            if (userData['is_superuser'] == true ||
-                userData['is_admin'] == true)
+            if (widget.userData['is_superuser'] == true ||
+                widget.userData['is_admin'] == true)
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -776,7 +835,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            if (userData['is_superuser'] == true)
+            if (widget.userData['is_superuser'] == true)
               Container(
                 decoration: const BoxDecoration(
                   border: Border(
@@ -801,7 +860,7 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
               ),
-            if (userData['is_admin'] == true)
+            if (widget.userData['is_admin'] == true)
               Container(
                 decoration: const BoxDecoration(
                   border: Border(
@@ -915,11 +974,12 @@ class HomeScreen extends StatelessWidget {
                       child: CircleAvatar(
                         radius: 30,
                         backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
-                        backgroundImage: userData['user_profile_image'] != null
-                            ? NetworkImage(_getProfileImageUrl(
-                                userData['user_profile_image']))
-                            : null,
-                        child: userData['user_profile_image'] == null
+                        backgroundImage:
+                            widget.userData['user_profile_image'] != null
+                                ? NetworkImage(_getProfileImageUrl(
+                                    widget.userData['user_profile_image']))
+                                : null,
+                        child: widget.userData['user_profile_image'] == null
                             ? const Icon(Icons.person,
                                 size: 35, color: Colors.white)
                             : null,
@@ -931,23 +991,24 @@ class HomeScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hi ${userData['user_type']}',
+                            'Hi ${widget.userData['user_type']}',
                             style: const TextStyle(
                               fontSize: 16,
                               color: Colors.black,
                             ),
                           ),
                           Text(
-                            userData['user_name'],
+                            widget.userData['user_name'],
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
                           ),
-                          if (userData['advocate_registration_number'] != null)
+                          if (widget.userData['advocate_registration_number'] !=
+                              null)
                             Text(
-                              userData['advocate_registration_number'],
+                              widget.userData['advocate_registration_number'],
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.black87,
@@ -1037,8 +1098,8 @@ class HomeScreen extends StatelessWidget {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => AddCaseScreen(
-                                    userData: userData,
-                                    count: count,
+                                    userData: widget.userData,
+                                    count: widget.count,
                                   ),
                                 ),
                               );
@@ -1128,8 +1189,8 @@ class HomeScreen extends StatelessWidget {
                                 context: context,
                                 builder: (BuildContext context) {
                                   return CalendarDialog(
-                                    userData: userData,
-                                    count: count,
+                                    userData: widget.userData,
+                                    count: widget.count,
                                   );
                                 },
                               );
@@ -1267,8 +1328,8 @@ class HomeScreen extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (context) => FilteredCasesScreen(
                                   filter: '',
-                                  userData: userData,
-                                  count: count,
+                                  userData: widget.userData,
+                                  count: widget.count,
                                 ),
                               ),
                             );
@@ -1279,8 +1340,8 @@ class HomeScreen extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (context) => FilteredCasesScreen(
                               filter: filter,
-                              userData: userData,
-                              count: count,
+                              userData: widget.userData,
+                              count: widget.count,
                             ),
                           ),
                         );
@@ -1358,564 +1419,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                     );
                   }).toList(),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Active Cases List
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Active Cases',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(235, 235, 234, 1),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: cases.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final caseData = entry.value;
-                          // Determine which party should be bold based on client_type
-                          final isPetitioner = caseData['client_type']
-                                  ?.toString()
-                                  .toLowerCase() ==
-                              'petitioner';
-                          final petitionerStyle = TextStyle(
-                            fontWeight: isPetitioner
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            fontSize: 16,
-                          );
-                          final respondentStyle = TextStyle(
-                            fontWeight: !isPetitioner
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            fontSize: 16,
-                          );
-
-                          return Column(
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: InkWell(
-                                  onTap: () {
-                                    print(
-                                        '\n=== Starting Navigation to Case Detail ===');
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CaseDetailScreen(
-                                          caseData: caseData,
-                                          cases: cases,
-                                          userData: userData,
-                                          count: count,
-                                        ),
-                                      ),
-                                    ).then((_) async {
-                                      print(
-                                          'Test 1: Returned from CaseDetailScreen');
-                                      try {
-                                        print(
-                                            'Test 2: Starting fresh data fetch');
-                                        final freshData =
-                                            await _fetchFreshData();
-                                        print(
-                                            'Test 3: Fresh data received successfully');
-                                        if (context.mounted) {
-                                          print(
-                                              'Test 4: Navigating to new HomeScreen with fresh data');
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => HomeScreen(
-                                                userData: freshData['userData'],
-                                                cases: freshData['cases'],
-                                                count: freshData['count'],
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        print(
-                                            'Test 5: Error refreshing data: $e');
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                  'Error refreshing data: $e'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    });
-                                    print(
-                                        '=== End Navigation to Case Detail ===\n');
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: const Color.fromRGBO(
-                                                123, 109, 217, 1),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(Icons.gavel,
-                                              color: Colors.white, size: 20),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      caseData['petitioner'] ??
-                                                          '',
-                                                      style: petitionerStyle,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  const Padding(
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                            horizontal: 8),
-                                                    child: Text('vs'),
-                                                  ),
-                                                  Expanded(
-                                                    child: Text(
-                                                      caseData['respondent'] ??
-                                                          '',
-                                                      style: respondentStyle,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    '#${caseData['case_no']}/${caseData['case_year']}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                  StatefulBuilder(
-                                                    builder: (BuildContext
-                                                            context,
-                                                        StateSetter setState) {
-                                                      final isDecided = caseData[
-                                                              'is_desided'] ??
-                                                          false;
-                                                      Future<void>
-                                                          _showCommentsDialog() async {
-                                                        final TextEditingController
-                                                            commentsController =
-                                                            TextEditingController();
-                                                        final result =
-                                                            await showDialog<
-                                                                bool>(
-                                                          context: context,
-                                                          barrierDismissible:
-                                                              false,
-                                                          builder: (BuildContext
-                                                              context) {
-                                                            return AlertDialog(
-                                                              title: const Text(
-                                                                  'Case Decision Comments'),
-                                                              content:
-                                                                  TextField(
-                                                                controller:
-                                                                    commentsController,
-                                                                decoration:
-                                                                    const InputDecoration(
-                                                                  hintText:
-                                                                      'Enter comments',
-                                                                  border:
-                                                                      OutlineInputBorder(),
-                                                                ),
-                                                                maxLines: 3,
-                                                              ),
-                                                              actions: [
-                                                                TextButton(
-                                                                  onPressed:
-                                                                      () {
-                                                                    Navigator.of(
-                                                                            context)
-                                                                        .pop(
-                                                                            false);
-                                                                  },
-                                                                  child: const Text(
-                                                                      'Cancel'),
-                                                                ),
-                                                                TextButton(
-                                                                  onPressed:
-                                                                      () {
-                                                                    Navigator.of(
-                                                                            context)
-                                                                        .pop(
-                                                                            true);
-                                                                  },
-                                                                  child: const Text(
-                                                                      'Confirm'),
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                        );
-
-                                                        if (result == true) {
-                                                          try {
-                                                            final apiService =
-                                                                ApiService();
-                                                            final token =
-                                                                await apiService
-                                                                    .getAccessToken();
-
-                                                            final response =
-                                                                await http.post(
-                                                              Uri.parse(
-                                                                  '${AppConfig.baseUrl}case/partialedit/'),
-                                                              headers: {
-                                                                'Authorization':
-                                                                    'Bearer $token',
-                                                                'Content-Type':
-                                                                    'application/json',
-                                                              },
-                                                              body:
-                                                                  json.encode({
-                                                                'id': caseData[
-                                                                    'id'],
-                                                                'is_desided':
-                                                                    true,
-                                                                'comments': commentsController
-                                                                        .text
-                                                                        .isEmpty
-                                                                    ? ""
-                                                                    : commentsController
-                                                                        .text,
-                                                              }),
-                                                            );
-
-                                                            if (response
-                                                                    .statusCode ==
-                                                                200) {
-                                                              final responseData =
-                                                                  json.decode(
-                                                                      response
-                                                                          .body);
-                                                              if (responseData[
-                                                                      'status'] ==
-                                                                  200) {
-                                                                if (context
-                                                                    .mounted) {
-                                                                  final freshData =
-                                                                      await _fetchFreshData();
-                                                                  Navigator
-                                                                      .pushReplacement(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder:
-                                                                          (context) =>
-                                                                              HomeScreen(
-                                                                        userData:
-                                                                            freshData['userData'],
-                                                                        cases: freshData[
-                                                                            'cases'],
-                                                                        count: freshData[
-                                                                            'count'],
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                }
-                                                              }
-                                                            }
-                                                          } catch (e) {
-                                                            setState(() {
-                                                              caseData[
-                                                                      'is_desided'] =
-                                                                  false;
-                                                            });
-                                                            if (context
-                                                                .mounted) {
-                                                              ScaffoldMessenger
-                                                                      .of(context)
-                                                                  .showSnackBar(
-                                                                SnackBar(
-                                                                  content: Text(
-                                                                      'Error updating case status: $e'),
-                                                                  backgroundColor:
-                                                                      Colors
-                                                                          .red,
-                                                                ),
-                                                              );
-                                                            }
-                                                          }
-                                                        } else {
-                                                          setState(() {
-                                                            caseData[
-                                                                    'is_desided'] =
-                                                                false;
-                                                          });
-                                                        }
-                                                        commentsController
-                                                            .dispose();
-                                                      }
-
-                                                      return Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          const Text(
-                                                            'Decided',
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              color:
-                                                                  Colors.grey,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 4),
-                                                          Switch(
-                                                            value: isDecided,
-                                                            onChanged: (bool
-                                                                newValue) async {
-                                                              if (newValue) {
-                                                                setState(() {
-                                                                  caseData[
-                                                                          'is_desided'] =
-                                                                      true;
-                                                                });
-                                                                await _showCommentsDialog();
-                                                              } else {
-                                                                try {
-                                                                  final apiService =
-                                                                      ApiService();
-                                                                  final token =
-                                                                      await apiService
-                                                                          .getAccessToken();
-
-                                                                  final response =
-                                                                      await http
-                                                                          .post(
-                                                                    Uri.parse(
-                                                                        '${AppConfig.baseUrl}case/partialedit/'),
-                                                                    headers: {
-                                                                      'Authorization':
-                                                                          'Bearer $token',
-                                                                      'Content-Type':
-                                                                          'application/json',
-                                                                    },
-                                                                    body: json
-                                                                        .encode({
-                                                                      'id': caseData[
-                                                                          'id'],
-                                                                      'is_desided':
-                                                                          false,
-                                                                      'comments':
-                                                                          "",
-                                                                    }),
-                                                                  );
-
-                                                                  if (response
-                                                                          .statusCode ==
-                                                                      200) {
-                                                                    final responseData =
-                                                                        json.decode(
-                                                                            response.body);
-                                                                    if (responseData[
-                                                                            'status'] ==
-                                                                        200) {
-                                                                      if (context
-                                                                          .mounted) {
-                                                                        final freshData =
-                                                                            await _fetchFreshData();
-                                                                        Navigator
-                                                                            .pushReplacement(
-                                                                          context,
-                                                                          MaterialPageRoute(
-                                                                            builder: (context) =>
-                                                                                HomeScreen(
-                                                                              userData: freshData['userData'],
-                                                                              cases: freshData['cases'],
-                                                                              count: freshData['count'],
-                                                                            ),
-                                                                          ),
-                                                                        );
-                                                                      }
-                                                                    }
-                                                                  }
-                                                                } catch (e) {
-                                                                  setState(() {
-                                                                    caseData[
-                                                                            'is_desided'] =
-                                                                        true;
-                                                                  });
-                                                                  if (context
-                                                                      .mounted) {
-                                                                    ScaffoldMessenger.of(
-                                                                            context)
-                                                                        .showSnackBar(
-                                                                      SnackBar(
-                                                                        content:
-                                                                            Text('Error updating case status: $e'),
-                                                                        backgroundColor:
-                                                                            Colors.red,
-                                                                      ),
-                                                                    );
-                                                                  }
-                                                                }
-                                                              }
-                                                            },
-                                                            activeColor:
-                                                                Colors.red,
-                                                            inactiveTrackColor:
-                                                                Colors.green
-                                                                    .withOpacity(
-                                                                        0.5),
-                                                            inactiveThumbColor:
-                                                                Colors.green,
-                                                            materialTapTargetSize:
-                                                                MaterialTapTargetSize
-                                                                    .shrinkWrap,
-                                                          ),
-                                                        ],
-                                                      );
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    'Court No: ${caseData['court_no']}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.black87,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 16),
-                                                  Text(
-                                                    'Ref: ${caseData['sub_advocate'] ?? 'N/A'}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.black87,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                caseData['stage_of_case']
-                                                        ['stage_of_case'] ??
-                                                    '',
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.blue,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    'Last: ${caseData['last_date'] ?? 'N/A'}',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      color: Colors.black87,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      _showNextDateUpdateDialog(
-                                                          context, caseData);
-                                                    },
-                                                    child: Text(
-                                                      'Next: ${caseData['next_date'] ?? 'N/A'}',
-                                                      style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.black87,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (index < cases.length - 1)
-                                const SizedBox(height: 4),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
                 ),
               ),
               const SizedBox(height: 20),

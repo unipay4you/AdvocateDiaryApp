@@ -125,24 +125,14 @@ class _MasterAdminPanelState extends State<MasterAdminPanel> {
         }).length;
 
         // Count undated cases (cases with next_date less than today)
-        print('\n=== Debugging Undated Cases ===');
-        print('Today: ${DateTime.now()}');
-        print('Total cases to check: ${casesList.length}');
-
         int undatedCount = 0;
         for (var case_ in casesList) {
-          print('\nChecking case: ${case_['case_no']}');
-          print('Is active: ${case_['is_active']}');
-          print('Next date: ${case_['next_date']}');
-
           // Skip if case is not active
           if (case_['is_active'] != true) {
-            print('Skipping - Case is not active');
             continue;
           }
 
           if (case_['next_date'] == null) {
-            print('Skipping - No next date set');
             continue;
           }
 
@@ -152,34 +142,63 @@ class _MasterAdminPanelState extends State<MasterAdminPanel> {
           final nextDateStart =
               DateTime(nextDate.year, nextDate.month, nextDate.day);
 
-          print('Next date parsed: $nextDateStart');
-          print('Today start: $todayStart');
-
           if (nextDateStart.isBefore(todayStart)) {
-            print('Case is undated - Next date is before today');
             undatedCount++;
-          } else {
-            print('Case is not undated - Next date is not before today');
           }
         }
 
         final undatedCases = undatedCount;
-        print('\nTotal undated cases found: $undatedCases');
-        print('=== End Undated Cases Debug ===\n');
 
         // Count running cases (is_active true)
         final runningCases = casesList.where((case_) {
           return case_['is_active'] == true;
         }).length;
 
-        // Count closed cases today (is_decided true and last_date is today)
+        // Debug section for decided and null cases
+        print('\n=== Debugging Decided and Null Cases ===');
+        casesList.forEach((case_) {
+          if (case_['is_decided'] == true || case_['is_decided'] == null) {
+            print('\nCase Details:');
+            print('Petitioner: ${case_['petitioner']}');
+            print('Respondent: ${case_['respondent']}');
+            print('Case No: ${case_['case_no']}');
+            print('Case Year: ${case_['case_year']}');
+            print('Is Decided: ${case_['is_decided']}');
+            print('Is Active: ${case_['is_active']}');
+            print('Next Date: ${case_['next_date']}');
+            print('Last Date: ${case_['last_date']}');
+            print('Advocate: ${case_['advocate']?['user_name']}');
+            print('Full Case Data: $case_');
+          }
+        });
+        print('=== End Debugging Decided and Null Cases ===\n');
+
+        // Count closed cases today (is_active false and next_date is today)
         final closedTodayCases = casesList.where((case_) {
-          if (case_['is_decided'] != true || case_['last_date'] == null)
+          if (case_['is_active'] != false || case_['next_date'] == null)
             return false;
-          final lastDate = DateTime.parse(case_['last_date']);
-          return lastDate.year == today.year &&
-              lastDate.month == today.month &&
-              lastDate.day == today.day;
+          final nextDate = DateTime.parse(case_['next_date']);
+          final today = DateTime.now();
+          final todayStart = DateTime(today.year, today.month, today.day);
+          final nextDateStart =
+              DateTime(nextDate.year, nextDate.month, nextDate.day);
+
+          // Debug for matching cases
+          if (nextDateStart.isAtSameMomentAs(todayStart)) {
+            print('\n=== Debugging Closed Today Case ===');
+            print('Case ID: ${case_['id']}');
+            print('Petitioner: ${case_['petitioner']}');
+            print('Respondent: ${case_['respondent']}');
+            print('Case No: ${case_['case_no']}');
+            print('Case Year: ${case_['case_year']}');
+            print('Is Active: ${case_['is_active']}');
+            print('Is Decided: ${case_['is_decided']}');
+            print('Next Date: ${case_['next_date']}');
+            print('Last Date: ${case_['last_date']}');
+            print('Advocate: ${case_['advocate']?['user_name']}');
+          }
+
+          return nextDateStart.isAtSameMomentAs(todayStart);
         }).length;
 
         print('Total Users: $totalUsers');
@@ -517,6 +536,7 @@ class _MasterAdminPanelState extends State<MasterAdminPanel> {
                         MaterialPageRoute(
                           builder: (context) => UsersListScreen(
                             users: _usersList,
+                            cases: _casesList,
                           ),
                         ),
                       );
