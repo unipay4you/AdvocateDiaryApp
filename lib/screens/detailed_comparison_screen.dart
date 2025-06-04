@@ -31,7 +31,7 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
   bool isLoading = false;
   Map<String, dynamic>? sectionDetails;
   Map<String, dynamic>? similarSectionDetails;
-  String selectedLanguage = 'English'; // Default language
+  String selectedLanguage = 'Hindi'; // Changed default language to Hindi
 
   @override
   void initState() {

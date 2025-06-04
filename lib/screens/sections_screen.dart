@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../services/api_service.dart';
 import '../config/app_config.dart';
 import 'section_text_screen.dart';
+import 'detailed_comparison_screen.dart';
 
 class SectionsScreen extends StatefulWidget {
   final int chapterId;
@@ -31,6 +32,7 @@ class _SectionsScreenState extends State<SectionsScreen> {
   bool _isLoading = true;
   String _error = '';
   final TextEditingController _searchController = TextEditingController();
+  Map<String, dynamic>? _similarSectionData;
 
   @override
   void initState() {
@@ -163,6 +165,86 @@ class _SectionsScreenState extends State<SectionsScreen> {
     }
   }
 
+  Future<bool> _fetchSimilarSections(String sectionId) async {
+    try {
+      print('\n=== Fetching Similar Sections ===');
+      print('Section ID: $sectionId');
+
+      final apiService = ApiService();
+      final token = await apiService.getAccessToken();
+      print('Access token retrieved successfully');
+
+      final requestBody = {
+        'section_id': sectionId,
+      };
+      print('Request Body: $requestBody');
+
+      print(
+          'Making API request to: ${AppConfig.baseUrl}actbook/similar-section/');
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}actbook/similar-section/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept': 'application/json; charset=utf-8',
+        },
+        body: json.encode(requestBody),
+      );
+
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Headers: ${response.headers}');
+
+      if (response.statusCode == 200) {
+        try {
+          final String decodedBody = utf8.decode(response.bodyBytes);
+          print('Decoded Response Body: $decodedBody');
+
+          final data = json.decode(decodedBody);
+          print('Parsed Response Data: $data');
+
+          if (data['data'] != null && data['data'].isNotEmpty) {
+            setState(() {
+              _similarSectionData = data['data'][0];
+            });
+            print('Similar section data loaded successfully');
+            return true;
+          } else {
+            print('No similar sections found in response data');
+            setState(() {
+              _similarSectionData = null;
+            });
+            return false;
+          }
+        } catch (e) {
+          print('JSON Decoding Error: $e');
+          setState(() {
+            _similarSectionData = null;
+          });
+          return false;
+        }
+      } else if (response.statusCode == 404) {
+        print('No similar sections found (404)');
+        setState(() {
+          _similarSectionData = null;
+        });
+        return false;
+      } else {
+        print(
+            'Error: Failed to load similar sections. Status: ${response.statusCode}');
+        setState(() {
+          _similarSectionData = null;
+        });
+        return false;
+      }
+    } catch (e) {
+      print('Error in _fetchSimilarSections: $e');
+      setState(() {
+        _similarSectionData = null;
+      });
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -258,25 +340,27 @@ class _SectionsScreenState extends State<SectionsScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: InkWell(
-                                    onTap: () {
+                                    onTap: () async {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               SectionTextScreen(
                                             sectionTitle:
-                                                section['section_title'] ??
-                                                    'Untitled Section',
+                                                section['section_title'],
                                             sectionTitleHindi: section[
                                                     'section_title_hindi'] ??
                                                 '',
                                             sectionText:
-                                                section['section_text'] ?? '',
+                                                section['section_text'],
                                             sectionTextHindi:
                                                 section['section_text_hindi'] ??
                                                     '',
                                             sectionNumber:
-                                                section['section_number'] ?? '',
+                                                section['section_number']
+                                                    .toString(),
+                                            sectionId: section['id'].toString(),
+                                            actName: widget.actName,
                                           ),
                                         ),
                                       );
