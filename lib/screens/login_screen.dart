@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../config/app_config.dart';
 import 'otp_verification_screen.dart';
 import 'profile_update_screen.dart';
 import 'email_verification_screen.dart';
@@ -605,6 +606,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: Text(
+                    'Version ${AppConfig.appVersion}',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ],
             ),

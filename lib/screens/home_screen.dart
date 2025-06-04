@@ -12,6 +12,7 @@ import 'add_case_screen.dart';
 import 'profile_update_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'admin/master_admin/master_admin_panel.dart';
+import 'acts_screen.dart';
 
 class CalendarDialog extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -268,48 +269,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStages();
+    // _loadStages(); // Commented out as this API call is not required at home screen load
   }
 
   @override
   void dispose() {
     mounted = false;
     super.dispose();
-  }
-
-  Future<void> _loadStages() async {
-    try {
-      final apiService = ApiService();
-      final token = await apiService.getAccessToken();
-
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}stage/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        if (responseData['status'] == 200 && responseData['payload'] is List) {
-          if (mounted) {
-            setState(() {
-              stages = responseData['payload'];
-            });
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading stages: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _handleLogout(BuildContext context) async {
@@ -895,6 +861,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 _handleLogout(context);
               },
             ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Version ${AppConfig.appVersion}',
+                style: TextStyle(
+                  color: Colors.black.withOpacity(0.6),
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ],
         ),
       ),
@@ -1141,15 +1119,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.search, color: Colors.white),
+                            icon: const Icon(Icons.book, color: Colors.white),
                             onPressed: () {
-                              // TODO: Implement search functionality
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ActsScreen(
+                                    userData: widget.userData,
+                                  ),
+                                ),
+                              );
                             },
                           ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Search',
+                          'Acts',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.black,

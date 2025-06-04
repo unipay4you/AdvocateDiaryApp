@@ -744,6 +744,9 @@ class _EditCaseScreenState extends State<EditCaseScreen> {
     Function(String?) onChanged, {
     bool isRequired = true,
   }) {
+    // Ensure unique values in the items list
+    final uniqueItems = items.toSet().toList();
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
@@ -756,7 +759,7 @@ class _EditCaseScreenState extends State<EditCaseScreen> {
           filled: true,
           fillColor: Colors.white,
         ),
-        items: items.map((String item) {
+        items: uniqueItems.map((item) {
           return DropdownMenuItem<String>(
             value: item,
             child: Text(item),
