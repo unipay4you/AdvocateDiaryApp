@@ -27,6 +27,7 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
   bool isLoadingSections = false;
   String? error;
   Map<String, dynamic>? similarSectionData;
+  List<dynamic> similarSectionDataList = [];
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
@@ -118,19 +119,28 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
               };
             }).toList();
 
-            // Sort sections numerically
+            // Sort sections numerically, handling subsections like 2(1), 2(2), 2(10)
+            int parseSectionNumber(String sectionNumber) {
+              final mainMatch = RegExp(r'^(\d+)').firstMatch(sectionNumber);
+              return mainMatch != null ? int.parse(mainMatch.group(1)!) : 0;
+            }
+
+            int parseSubSectionNumber(String sectionNumber) {
+              final subMatch = RegExp(r'\((\d+)\)').firstMatch(sectionNumber);
+              return subMatch != null ? int.parse(subMatch.group(1)!) : 0;
+            }
+
             processedSections.sort((a, b) {
-              // Extract numbers from section numbers (e.g., "123" from "Section 123")
-              String numA =
-                  a['section_number']?.replaceAll(RegExp(r'[^0-9]'), '') ?? '0';
-              String numB =
-                  b['section_number']?.replaceAll(RegExp(r'[^0-9]'), '') ?? '0';
-
-              // Convert to integers for comparison
-              int intA = int.tryParse(numA) ?? 0;
-              int intB = int.tryParse(numB) ?? 0;
-
-              return intA.compareTo(intB);
+              String aNum = a['section_number'] ?? '';
+              String bNum = b['section_number'] ?? '';
+              int aMain = parseSectionNumber(aNum);
+              int bMain = parseSectionNumber(bNum);
+              if (aMain != bMain) {
+                return aMain.compareTo(bMain);
+              }
+              int aSub = parseSubSectionNumber(aNum);
+              int bSub = parseSubSectionNumber(bNum);
+              return aSub.compareTo(bSub);
             });
 
             print('Processed Sections: $processedSections');
@@ -210,36 +220,42 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
 
           if (data['data'] != null && data['data'].isNotEmpty) {
             setState(() {
+              similarSectionDataList = data['data'];
               similarSectionData = data['data'][0];
             });
             print('Similar section data loaded successfully');
           } else {
             print('No similar sections found in response data');
             setState(() {
+              similarSectionDataList = [];
               similarSectionData = null;
             });
           }
         } catch (e) {
           print('JSON Decoding Error: $e');
           setState(() {
+            similarSectionDataList = [];
             similarSectionData = null;
           });
         }
       } else if (response.statusCode == 404) {
         print('No similar sections found (404)');
         setState(() {
+          similarSectionDataList = [];
           similarSectionData = null;
         });
       } else {
         print(
             'Error: Failed to load similar sections. Status: ${response.statusCode}');
         setState(() {
+          similarSectionDataList = [];
           similarSectionData = null;
         });
       }
     } catch (e) {
       print('Error in _fetchSimilarSections: $e');
       setState(() {
+        similarSectionDataList = [];
         similarSectionData = null;
       });
     }
@@ -426,8 +442,21 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
                         )
                       : _buildSearchableDropdown(),
             const SizedBox(height: 24),
-            // Comparison Display
-            if (selectedAct != null) _buildComparisonBox(),
+            // Show all similar sections if available
+            if (similarSectionDataList.isNotEmpty)
+              Expanded(
+                child: ListView.builder(
+                  itemCount: similarSectionDataList.length,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildComparisonBoxForSimilarSection(
+                        similarSectionDataList[index]),
+                  ),
+                ),
+              ),
+            // Fallback: show the old single comparison box if no list
+            if (similarSectionDataList.isEmpty && selectedAct != null)
+              _buildComparisonBox(),
           ],
         ),
       ),
@@ -605,6 +634,206 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonBoxForSimilarSection(dynamic data) {
+    final section = data['section'];
+    final similarSection = data['similar_section'];
+    final sectionActName = section['chapter']?['act']?['act_name'] ?? '';
+    final similarSectionActName =
+        similarSection['chapter']?['act']?['act_name'] ?? '';
+    final selectedActName = _getFilteredActs()
+        .firstWhere((act) => act['short_name'] == selectedAct)['name']!;
+    final correspondingActName = _getFilteredActs().firstWhere(
+        (act) => act['short_name'] == actMappings[selectedAct])['name']!;
+
+    Map<String, dynamic> leftSection, rightSection;
+    String leftActName, rightActName;
+    if (sectionActName == selectedActName) {
+      leftSection = section;
+      rightSection = similarSection;
+      leftActName = sectionActName;
+      rightActName = similarSectionActName;
+    } else {
+      leftSection = similarSection;
+      rightSection = section;
+      leftActName = similarSectionActName;
+      rightActName = sectionActName;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  leftActName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromRGBO(123, 109, 217, 1),
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.compare_arrows,
+                color: Color.fromRGBO(123, 109, 217, 1),
+                size: 18,
+              ),
+              Expanded(
+                child: Text(
+                  rightActName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromRGBO(123, 109, 217, 1),
+                  ),
+                  textAlign: TextAlign.end,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(123, 109, 217, 0.07),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color.fromRGBO(123, 109, 217, 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Section',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color.fromRGBO(123, 109, 217, 1),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        leftSection['section_number'] ?? 'NA',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromRGBO(123, 109, 217, 1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(123, 109, 217, 0.07),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color.fromRGBO(123, 109, 217, 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Section',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color.fromRGBO(123, 109, 217, 1),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        rightSection['section_number'] ?? 'NA',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromRGBO(123, 109, 217, 1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailedComparisonScreen(
+                      selectedAct: selectedAct!,
+                      selectedSection: leftSection['id'].toString(),
+                      similarSectionData: data,
+                      sections: [
+                        {
+                          'id': leftSection['id'].toString(),
+                          'number': leftSection['section_number'],
+                          'title': leftSection['section_title'] ?? '',
+                        },
+                        {
+                          'id': rightSection['id'].toString(),
+                          'number': rightSection['section_number'],
+                          'title': rightSection['section_title'] ?? '',
+                        }
+                      ],
+                      actMappings: actMappings,
+                      filteredActs: _getFilteredActs(),
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(123, 109, 217, 1),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Compare Acts',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
               ),

@@ -6,6 +6,8 @@ import '../../../config/app_config.dart';
 import 'users_list_screen.dart';
 import 'cases_list_screen.dart';
 import 'courts_list_screen.dart';
+import '../../acts_comparison_screen.dart';
+import 'link_similar_sections_screen.dart';
 
 class MasterAdminPanel extends StatefulWidget {
   const MasterAdminPanel({Key? key}) : super(key: key);
@@ -333,6 +335,20 @@ class _MasterAdminPanelState extends State<MasterAdminPanel> {
                           const Color.fromRGBO(233, 30, 99, 1),
                           () {
                             // TODO: Navigate to system settings
+                          },
+                        ),
+                        _buildActionCard(
+                          'Link Similar Sections',
+                          Icons.link,
+                          const Color.fromRGBO(123, 109, 217, 1),
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const LinkSimilarSectionsScreen(),
+                              ),
+                            );
                           },
                         ),
                       ],

@@ -32,10 +32,14 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
   Map<String, dynamic>? sectionDetails;
   Map<String, dynamic>? similarSectionDetails;
   String selectedLanguage = 'Hindi'; // Changed default language to Hindi
+  late PageController _pageController;
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
+    _pageController =
+        PageController(initialPage: selectedLanguage == 'Hindi' ? 0 : 1);
     print('\n=== Initial Section Data ===');
     print('Selected Section ID: ${widget.selectedSection}');
     print('Similar Section Data: ${widget.similarSectionData}');
@@ -61,9 +65,9 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
       print('Section Text: ${similarSection['section_text']}');
       print('Section Text Hindi: ${similarSection['section_text_hindi']}');
 
-      // Determine which section belongs to which act
-      final selectedSectionNumber = widget.selectedSection.split('-')[0];
-      if (section['section_number'] == selectedSectionNumber) {
+      // Determine which section belongs to which act by section id
+      final selectedSectionId = widget.selectedSection;
+      if (section['id'].toString() == selectedSectionId) {
         setState(() {
           sectionDetails = section;
           similarSectionDetails = similarSection;
@@ -75,6 +79,15 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
         });
       }
     }
+  }
+
+  void _onLanguageToggle(String lang) {
+    setState(() {
+      selectedLanguage = lang;
+      _currentPage = lang == 'Hindi' ? 0 : 1;
+      _pageController.animateToPage(_currentPage,
+          duration: Duration(milliseconds: 300), curve: Curves.ease);
+    });
   }
 
   Widget _buildLanguageToggle() {
@@ -99,11 +112,7 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
 
   Widget _buildToggleButton(String text, bool isSelected) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedLanguage = text == 'English' ? 'English' : 'Hindi';
-        });
-      },
+      onTap: () => _onLanguageToggle(text == 'English' ? 'English' : 'Hindi'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
@@ -183,26 +192,34 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
               ),
             ],
             const SizedBox(height: 16),
-            if (selectedLanguage == 'English' &&
-                details['section_text'] != null)
-              Text(
-                details['section_text'],
-                style: const TextStyle(fontSize: 14),
-              )
-            else if (selectedLanguage == 'Hindi' &&
-                details['section_text_hindi'] != null)
-              Text(
-                details['section_text_hindi'],
-                style: const TextStyle(fontSize: 14),
-              )
-            else
-              const Text(
-                'No text available in selected language',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+            SizedBox(
+              height: 120,
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    selectedLanguage = index == 0 ? 'Hindi' : 'English';
+                    _currentPage = index;
+                  });
+                },
+                children: [
+                  // Hindi page
+                  details['section_text_hindi'] != null
+                      ? SingleChildScrollView(
+                          child: Text(details['section_text_hindi'],
+                              style: const TextStyle(fontSize: 14)))
+                      : const Text('No text available in Hindi',
+                          style: TextStyle(fontSize: 14, color: Colors.grey)),
+                  // English page
+                  details['section_text'] != null
+                      ? SingleChildScrollView(
+                          child: Text(details['section_text'],
+                              style: const TextStyle(fontSize: 14)))
+                      : const Text('No text available in English',
+                          style: TextStyle(fontSize: 14, color: Colors.grey)),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -221,14 +238,17 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
-              'Detailed Comparison',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
+            const Expanded(
+              child: Text(
+                'Detailed Comparison',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             _buildLanguageToggle(),
           ],
         ),
@@ -254,6 +274,7 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
                       fontWeight: FontWeight.bold,
                       color: Color.fromRGBO(123, 109, 217, 1),
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const Icon(
@@ -269,6 +290,7 @@ class _DetailedComparisonScreenState extends State<DetailedComparisonScreen> {
                       color: Color.fromRGBO(123, 109, 217, 1),
                     ),
                     textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
