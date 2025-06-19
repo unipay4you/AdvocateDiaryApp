@@ -345,6 +345,7 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
       ),
       body: Column(
         children: [
+          // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -377,6 +378,113 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
               onChanged: _filterChapters,
             ),
           ),
+          // All Sections Tile
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () {
+                  print('\n=== Navigating to All Sections ===');
+                  print('Request Parameters:');
+                  print('chapterId: 0');
+                  print('chapterTitle: All Sections');
+                  print('chapterTitleHindi: सभी धाराएं');
+                  print('chapterNumber: 0');
+                  print('actName: ${widget.actName}');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SectionsScreen(
+                        chapterId: 0, // Special ID to indicate all sections
+                        chapterTitle: 'All Sections',
+                        chapterTitleHindi: 'सभी धाराएं',
+                        chapterNumber: 0,
+                        actName: widget.actName,
+                        actbookId: widget.actbookId,
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color.fromRGBO(123, 109, 217, 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.list_alt,
+                          color: Color.fromRGBO(123, 109, 217, 1),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'सभी धाराएं',
+                              style: TextStyle(
+                                fontFamily: 'Noto Sans Devanagari',
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'All Sections',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color.fromRGBO(123, 109, 217, 1),
+                              Color.fromRGBO(123, 109, 217, 0.8),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color.fromRGBO(123, 109, 217, 0.3),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Chapter List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -407,6 +515,17 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
                                   ),
                                   child: InkWell(
                                     onTap: () {
+                                      print(
+                                          '\n=== Navigating to Chapter Sections ===');
+                                      print('Request Parameters:');
+                                      print('chapterId: ${chapter['id']}');
+                                      print(
+                                          'chapterTitle: ${chapter['chapter_title'] ?? 'Untitled Chapter'}');
+                                      print(
+                                          'chapterTitleHindi: ${chapter['chapter_title_hindi'] ?? ''}');
+                                      print(
+                                          'chapterNumber: ${chapter['chapter_number']}');
+                                      print('actName: ${widget.actName}');
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -421,6 +540,7 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
                                             chapterNumber:
                                                 chapter['chapter_number'],
                                             actName: widget.actName,
+                                            actbookId: widget.actbookId,
                                           ),
                                         ),
                                       );

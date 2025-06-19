@@ -35,6 +35,37 @@ class _SectionTextScreenState extends State<SectionTextScreen> {
   Map<String, dynamic>? _similarSectionData;
   String _selectedLanguage = 'Hindi'; // Default language is Hindi
 
+  // Add this function to properly sort section numbers
+  double _getSectionNumberValue(String sectionNumber) {
+    // Split the section number into parts (e.g., "2.10" -> ["2", "10"])
+    final parts = sectionNumber.split('.');
+
+    // Convert to a double for proper numerical comparison
+    if (parts.length > 1) {
+      return double.parse('${parts[0]}.${parts[1]}');
+    }
+    return double.parse(parts[0]);
+  }
+
+  // Add this function to compare section numbers for sorting
+  int _compareSectionNumbers(String a, String b) {
+    final aValue = _getSectionNumberValue(a);
+    final bValue = _getSectionNumberValue(b);
+    return aValue.compareTo(bValue);
+  }
+
+  // Add this function to display the section number
+  String _displaySectionNumber(String sectionNumber) {
+    // Split the section number into parts
+    final parts = sectionNumber.split('.');
+
+    // If there's a decimal part, ensure it's displayed correctly
+    if (parts.length > 1) {
+      return '${parts[0]}.${parts[1]}';
+    }
+    return sectionNumber;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -301,6 +332,8 @@ ${widget.sectionText}
 
     final displaySection = isCurrentSection ? similarSection : section;
     final actName = displaySection['chapter']?['act']?['act_name'] ?? '';
+    final formattedSectionNumber =
+        _displaySectionNumber(displaySection['section_number']);
 
     return Card(
       child: Padding(
@@ -328,7 +361,7 @@ ${widget.sectionText}
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Section ${displaySection['section_number']}',
+                      'Section $formattedSectionNumber',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -384,12 +417,14 @@ ${widget.sectionText}
                         sections: [
                           {
                             'id': currentSection['id'].toString(),
-                            'number': currentSection['section_number'],
+                            'number': _displaySectionNumber(
+                                currentSection['section_number']),
                             'title': currentSection['section_title'] ?? '',
                           },
                           {
                             'id': otherSection['id'].toString(),
-                            'number': otherSection['section_number'],
+                            'number': _displaySectionNumber(
+                                otherSection['section_number']),
                             'title': otherSection['section_title'] ?? '',
                           }
                         ],

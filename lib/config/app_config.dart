@@ -1,8 +1,8 @@
 class AppConfig {
   static const bool isDevelopment =
-      false; // Change this to false for production
+      true; // Change this to false for production
   static const String appVersion =
-      '2.0.0'; // App version in semantic versioning format
+      '2.1.4'; // App version in semantic versioning format
   static const String baseAPI = isDevelopment
       ? 'http://192.168.1.2:8000' // For Android Emulator
       : 'https://mylegaldiary.in';

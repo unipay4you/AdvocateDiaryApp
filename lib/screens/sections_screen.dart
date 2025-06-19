@@ -12,6 +12,7 @@ class SectionsScreen extends StatefulWidget {
   final String chapterTitleHindi;
   final int chapterNumber;
   final String actName;
+  final int actbookId;
 
   const SectionsScreen({
     Key? key,
@@ -20,6 +21,7 @@ class SectionsScreen extends StatefulWidget {
     required this.chapterTitleHindi,
     required this.chapterNumber,
     required this.actName,
+    required this.actbookId,
   }) : super(key: key);
 
   @override
@@ -33,6 +35,58 @@ class _SectionsScreenState extends State<SectionsScreen> {
   String _error = '';
   final TextEditingController _searchController = TextEditingController();
   Map<String, dynamic>? _similarSectionData;
+  Map<String, bool> _expandedGroups = {};
+
+  // Add function to get main section number
+  String _getMainSectionNumber(String sectionNumber) {
+    // Extract the main number before the parenthesis
+    return sectionNumber.split('(')[0];
+  }
+
+  // Add function to check if section has subsections
+  bool _hasSubsections(String mainSection) {
+    return _filteredSections.any((section) =>
+        section['section_number'].toString().startsWith('$mainSection('));
+  }
+
+  // Add function to get subsections for a main section
+  List<dynamic> _getSubsections(String mainSection) {
+    return _filteredSections
+        .where((section) =>
+            section['section_number'].toString().startsWith('$mainSection('))
+        .toList()
+      ..sort((a, b) {
+        // Extract numbers from format like "2(1)" and "2(2)"
+        final aMatch = RegExp(r'(\d+)\((\d+)\)')
+            .firstMatch(a['section_number'].toString());
+        final bMatch = RegExp(r'(\d+)\((\d+)\)')
+            .firstMatch(b['section_number'].toString());
+
+        if (aMatch != null && bMatch != null) {
+          final aMain = int.parse(aMatch.group(1)!);
+          final aSub = int.parse(aMatch.group(2)!);
+          final bMain = int.parse(bMatch.group(1)!);
+          final bSub = int.parse(bMatch.group(2)!);
+
+          if (aMain == bMain) {
+            return aSub.compareTo(bSub);
+          }
+          return aMain.compareTo(bMain);
+        }
+        return 0;
+      });
+  }
+
+  // Add function to get main sections
+  List<String> _getMainSections() {
+    final mainSections = _filteredSections
+        .map((section) =>
+            _getMainSectionNumber(section['section_number'].toString()))
+        .toSet()
+        .toList();
+    mainSections.sort((a, b) => int.parse(a).compareTo(int.parse(b)));
+    return mainSections;
+  }
 
   @override
   void initState() {
@@ -71,6 +125,9 @@ class _SectionsScreenState extends State<SectionsScreen> {
               sectionText.contains(searchQuery) ||
               sectionTextHindi.contains(searchQuery);
         }).toList();
+
+        // Sort filtered sections
+        _sortSections(_filteredSections);
       }
     });
   }
@@ -83,6 +140,19 @@ class _SectionsScreenState extends State<SectionsScreen> {
       print('Access token retrieved successfully');
 
       print('Making API request to: ${AppConfig.baseUrl}actbook/section/');
+
+      // Prepare request body based on whether we're fetching all sections or chapter-specific sections
+      final Map<String, dynamic> requestBody = widget.chapterId == 0
+          ? {
+              'chapter_id': 'all',
+              'actbook_id': widget.actbookId,
+            }
+          : {
+              'chapter_id': widget.chapterId,
+            };
+
+      print('Request Body: $requestBody');
+
       final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}actbook/section/'),
         headers: {
@@ -90,9 +160,7 @@ class _SectionsScreenState extends State<SectionsScreen> {
           'Content-Type': 'application/json; charset=utf-8',
           'Accept': 'application/json; charset=utf-8',
         },
-        body: json.encode({
-          'chapter_id': widget.chapterId,
-        }),
+        body: json.encode(requestBody),
       );
 
       print('Response Status Code: ${response.statusCode}');
@@ -129,6 +197,9 @@ class _SectionsScreenState extends State<SectionsScreen> {
                 processedSections.add(section);
               }
             }
+
+            // Sort the sections by section number
+            _sortSections(processedSections);
 
             setState(() {
               _sections = processedSections;
@@ -328,140 +399,538 @@ class _SectionsScreenState extends State<SectionsScreen> {
                           )
                         : RefreshIndicator(
                             onRefresh: _fetchSections,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _filteredSections.length,
-                              itemBuilder: (context, index) {
-                                final section = _filteredSections[index];
-                                return Card(
-                                  elevation: 2,
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: InkWell(
-                                    onTap: () async {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              SectionTextScreen(
-                                            sectionTitle:
-                                                section['section_title'],
-                                            sectionTitleHindi: section[
-                                                    'section_title_hindi'] ??
-                                                '',
-                                            sectionText:
-                                                section['section_text'],
-                                            sectionTextHindi:
-                                                section['section_text_hindi'] ??
-                                                    '',
-                                            sectionNumber:
-                                                section['section_number']
-                                                    .toString(),
-                                            sectionId: section['id'].toString(),
-                                            actName: widget.actName,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                      child: Row(
-                                        children: [
-                                          // Section titles
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                if (section[
-                                                        'section_title_hindi'] !=
-                                                    null)
-                                                  Row(
+                            child: CustomScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              slivers: [
+                                SliverPadding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  sliver: SliverList(
+                                    delegate: SliverChildBuilderDelegate(
+                                      (context, index) {
+                                        final mainSection =
+                                            _getMainSections()[index];
+                                        final hasSubsections =
+                                            _hasSubsections(mainSection);
+                                        final isExpanded =
+                                            _expandedGroups[mainSection] ??
+                                                false;
+                                        final subsections =
+                                            _getSubsections(mainSection);
+
+                                        return Column(
+                                          children: [
+                                            Card(
+                                              elevation: 2,
+                                              margin: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: InkWell(
+                                                onTap: hasSubsections
+                                                    ? () {
+                                                        setState(() {
+                                                          _expandedGroups[
+                                                                  mainSection] =
+                                                              !isExpanded;
+                                                        });
+                                                      }
+                                                    : () {
+                                                        final section = _filteredSections
+                                                            .firstWhere((s) =>
+                                                                s['section_number']
+                                                                    .toString() ==
+                                                                mainSection);
+                                                        _navigateToSection(
+                                                            section);
+                                                      },
+                                                child: Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 12),
+                                                  child: Row(
                                                     children: [
-                                                      Text(
-                                                        'Section ${section['section_number']} - ',
-                                                        style: const TextStyle(
-                                                          color: Color.fromRGBO(
-                                                              123, 109, 217, 1),
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          fontSize: 14,
+                                                      // Section Number
+                                                      Container(
+                                                        width: 60,
+                                                        child: Column(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              'Section',
+                                                              style: TextStyle(
+                                                                color: Colors
+                                                                    .grey[600],
+                                                                fontSize: 12,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              mainSection,
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: Color
+                                                                    .fromRGBO(
+                                                                        123,
+                                                                        109,
+                                                                        217,
+                                                                        1),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 16,
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ),
                                                       ),
+                                                      // Section Title
                                                       Expanded(
-                                                        child: Text(
-                                                          section[
-                                                              'section_title_hindi'],
-                                                          style:
-                                                              const TextStyle(
-                                                            fontFamily:
-                                                                'Noto Sans Devanagari',
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                            fontSize: 14,
-                                                            height: 1.3,
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      12),
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              if (hasSubsections &&
+                                                                  subsections
+                                                                      .isNotEmpty) ...[
+                                                                if (subsections[
+                                                                            0][
+                                                                        'section_title_hindi'] !=
+                                                                    null)
+                                                                  Text(
+                                                                    subsections[
+                                                                            0][
+                                                                        'section_title_hindi'],
+                                                                    style:
+                                                                        const TextStyle(
+                                                                      fontFamily:
+                                                                          'Noto Sans Devanagari',
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: Colors
+                                                                          .black87,
+                                                                    ),
+                                                                    maxLines: 1,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                Text(
+                                                                  subsections[0]
+                                                                          [
+                                                                          'section_title'] ??
+                                                                      'Untitled Section',
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontSize:
+                                                                        12,
+                                                                    color: Colors
+                                                                        .black87,
+                                                                  ),
+                                                                  maxLines: 1,
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
+                                                                ),
+                                                              ] else if (_filteredSections.any((s) =>
+                                                                  s['section_number']
+                                                                      .toString() ==
+                                                                  mainSection)) ...[
+                                                                Builder(
+                                                                  builder:
+                                                                      (context) {
+                                                                    final section = _filteredSections.firstWhere((s) =>
+                                                                        s['section_number']
+                                                                            .toString() ==
+                                                                        mainSection);
+                                                                    return Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      children: [
+                                                                        if (section['section_title_hindi'] !=
+                                                                            null)
+                                                                          Text(
+                                                                            section['section_title_hindi'],
+                                                                            style:
+                                                                                const TextStyle(
+                                                                              fontFamily: 'Noto Sans Devanagari',
+                                                                              fontSize: 12,
+                                                                              color: Colors.black87,
+                                                                            ),
+                                                                            maxLines:
+                                                                                1,
+                                                                            overflow:
+                                                                                TextOverflow.ellipsis,
+                                                                          ),
+                                                                        Text(
+                                                                          section['section_title'] ??
+                                                                              'Untitled Section',
+                                                                          style:
+                                                                              const TextStyle(
+                                                                            fontSize:
+                                                                                12,
+                                                                            color:
+                                                                                Colors.black87,
+                                                                          ),
+                                                                          maxLines:
+                                                                              1,
+                                                                          overflow:
+                                                                              TextOverflow.ellipsis,
+                                                                        ),
+                                                                      ],
+                                                                    );
+                                                                  },
+                                                                ),
+                                                              ],
+                                                            ],
                                                           ),
                                                         ),
                                                       ),
+                                                      // Icon
+                                                      if (hasSubsections)
+                                                        Container(
+                                                          width: 36,
+                                                          height: 36,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            gradient:
+                                                                const LinearGradient(
+                                                              begin: Alignment
+                                                                  .topLeft,
+                                                              end: Alignment
+                                                                  .bottomRight,
+                                                              colors: [
+                                                                Color.fromRGBO(
+                                                                    123,
+                                                                    109,
+                                                                    217,
+                                                                    1),
+                                                                Color.fromRGBO(
+                                                                    123,
+                                                                    109,
+                                                                    217,
+                                                                    0.8),
+                                                              ],
+                                                            ),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: const Color
+                                                                    .fromRGBO(
+                                                                    123,
+                                                                    109,
+                                                                    217,
+                                                                    0.3),
+                                                                blurRadius: 4,
+                                                                offset:
+                                                                    const Offset(
+                                                                        0, 2),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Icon(
+                                                            isExpanded
+                                                                ? Icons
+                                                                    .expand_less
+                                                                : Icons
+                                                                    .expand_more,
+                                                            color: Colors.white,
+                                                            size: 18,
+                                                          ),
+                                                        )
+                                                      else
+                                                        Container(
+                                                          width: 36,
+                                                          height: 36,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            gradient:
+                                                                const LinearGradient(
+                                                              begin: Alignment
+                                                                  .topLeft,
+                                                              end: Alignment
+                                                                  .bottomRight,
+                                                              colors: [
+                                                                Color.fromRGBO(
+                                                                    123,
+                                                                    109,
+                                                                    217,
+                                                                    1),
+                                                                Color.fromRGBO(
+                                                                    123,
+                                                                    109,
+                                                                    217,
+                                                                    0.8),
+                                                              ],
+                                                            ),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: const Color
+                                                                    .fromRGBO(
+                                                                    123,
+                                                                    109,
+                                                                    217,
+                                                                    0.3),
+                                                                blurRadius: 4,
+                                                                offset:
+                                                                    const Offset(
+                                                                        0, 2),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons.arrow_forward,
+                                                            color: Colors.white,
+                                                            size: 18,
+                                                          ),
+                                                        ),
                                                     ],
                                                   ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  section['section_title'] ??
-                                                      'Untitled Section',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 14,
-                                                  ),
                                                 ),
-                                              ],
-                                            ),
-                                          ),
-                                          // Enter icon
-                                          Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              gradient: const LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  Color.fromRGBO(
-                                                      123, 109, 217, 1),
-                                                  Color.fromRGBO(
-                                                      123, 109, 217, 0.8),
-                                                ],
                                               ),
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: const Color.fromRGBO(
-                                                      123, 109, 217, 0.3),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
                                             ),
-                                            child: const Icon(
-                                              Icons.arrow_forward,
-                                              color: Colors.white,
-                                              size: 18,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                            if (hasSubsections && isExpanded)
+                                              ...subsections
+                                                  .map((subsection) => Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                                left: 16,
+                                                                bottom: 12),
+                                                    child: Card(
+                                                      elevation: 1,
+                                                          margin:
+                                                              EdgeInsets.zero,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                      ),
+                                                      child: InkWell(
+                                                            onTap: () =>
+                                                                _navigateToSection(
+                                                                    subsection),
+                                                        child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          16,
+                                                                      vertical:
+                                                                          12),
+                                                          child: Row(
+                                                            children: [
+                                                              Expanded(
+                                                                    child:
+                                                                        Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                  children: [
+                                                                        if (subsection['section_title_hindi'] !=
+                                                                            null)
+                                                                      Row(
+                                                                        children: [
+                                                                          Text(
+                                                                            'Section ${subsection['section_number']} - ',
+                                                                            style: const TextStyle(
+                                                                              color: Color.fromRGBO(123, 109, 217, 1),
+                                                                              fontWeight: FontWeight.w500,
+                                                                              fontSize: 14,
+                                                                            ),
+                                                                          ),
+                                                                          Expanded(
+                                                                            child: Text(
+                                                                              subsection['section_title_hindi'],
+                                                                              style: const TextStyle(
+                                                                                fontFamily: 'Noto Sans Devanagari',
+                                                                                fontWeight: FontWeight.w500,
+                                                                                fontSize: 14,
+                                                                                height: 1.3,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                2),
+                                                                    Text(
+                                                                          subsection['section_title'] ??
+                                                                              'Untitled Section',
+                                                                          style:
+                                                                              const TextStyle(
+                                                                            fontWeight:
+                                                                                FontWeight.bold,
+                                                                            fontSize:
+                                                                                14,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                width: 36,
+                                                                height: 36,
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      gradient:
+                                                                          const LinearGradient(
+                                                                        begin: Alignment
+                                                                            .topLeft,
+                                                                        end: Alignment
+                                                                            .bottomRight,
+                                                                    colors: [
+                                                                          Color.fromRGBO(
+                                                                              123,
+                                                                              109,
+                                                                              217,
+                                                                              1),
+                                                                          Color.fromRGBO(
+                                                                              123,
+                                                                              109,
+                                                                              217,
+                                                                              0.8),
+                                                                        ],
+                                                                      ),
+                                                                      shape: BoxShape
+                                                                          .circle,
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                          color: const Color
+                                                                              .fromRGBO(
+                                                                              123,
+                                                                              109,
+                                                                              217,
+                                                                              0.3),
+                                                                          blurRadius:
+                                                                              4,
+                                                                          offset: const Offset(
+                                                                              0,
+                                                                              2),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                    child:
+                                                                        const Icon(
+                                                                      Icons
+                                                                          .arrow_forward,
+                                                                      color: Colors
+                                                                          .white,
+                                                                  size: 18,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                      ))
+                                                  .toList(),
+                                          ],
+                                        );
+                                      },
+                                      childCount: _getMainSections().length,
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                              ],
                             ),
                           ),
           ),
         ],
       ),
     );
+  }
+
+  void _navigateToSection(dynamic section) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SectionTextScreen(
+          sectionTitle: section['section_title'],
+          sectionTitleHindi: section['section_title_hindi'] ?? '',
+          sectionText: section['section_text'],
+          sectionTextHindi: section['section_text_hindi'] ?? '',
+          sectionNumber: section['section_number'].toString(),
+          sectionId: section['id'].toString(),
+          actName: widget.actName,
+        ),
+      ),
+    );
+  }
+
+  // Add function to get numerical value of section number
+  double _getSectionNumberValue(String sectionNumber) {
+    final match = RegExp(r'(\d+)\((\d+)\)').firstMatch(sectionNumber);
+    if (match != null) {
+      final main = int.parse(match.group(1)!);
+      final sub = int.parse(match.group(2)!);
+      return main +
+          (sub / 100); // This will create values like 2.01, 2.02, etc.
+    }
+    return double.parse(sectionNumber);
+  }
+
+  // Add function to sort sections by number
+  void _sortSections(List<dynamic> sections) {
+    sections.sort((a, b) {
+      final aValue = _getSectionNumberValue(a['section_number'].toString());
+      final bValue = _getSectionNumberValue(b['section_number'].toString());
+      return aValue.compareTo(bValue);
+    });
+  }
+}
+
+class _SliverHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final bool hasSubsections;
+
+  _SliverHeaderDelegate({
+    required this.child,
+    required this.hasSubsections,
+  });
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      height: hasSubsections ? 85.0 : 65.0,
+      color: const Color.fromRGBO(253, 255, 247, 1),
+      child: child,
+    );
+  }
+
+  @override
+  double get maxExtent => hasSubsections ? 85.0 : 65.0;
+
+  @override
+  double get minExtent => hasSubsections ? 85.0 : 65.0;
+
+  @override
+  bool shouldRebuild(covariant _SliverHeaderDelegate oldDelegate) {
+    return child != oldDelegate.child ||
+        hasSubsections != oldDelegate.hasSubsections;
   }
 }

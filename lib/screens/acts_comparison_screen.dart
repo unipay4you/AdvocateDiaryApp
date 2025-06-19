@@ -118,6 +118,21 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
               };
             }).toList();
 
+            // Sort sections numerically
+            processedSections.sort((a, b) {
+              // Extract numbers from section numbers (e.g., "123" from "Section 123")
+              String numA =
+                  a['section_number']?.replaceAll(RegExp(r'[^0-9]'), '') ?? '0';
+              String numB =
+                  b['section_number']?.replaceAll(RegExp(r'[^0-9]'), '') ?? '0';
+
+              // Convert to integers for comparison
+              int intA = int.tryParse(numA) ?? 0;
+              int intB = int.tryParse(numB) ?? 0;
+
+              return intA.compareTo(intB);
+            });
+
             print('Processed Sections: $processedSections');
 
             setState(() {
@@ -481,7 +496,8 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color.fromRGBO(123, 109, 217, 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -518,7 +534,8 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color.fromRGBO(123, 109, 217, 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -540,7 +557,8 @@ class _ActsComparisonScreenState extends State<ActsComparisonScreen> {
                       const SizedBox(height: 4),
                       Text(
                         similarSectionData != null
-                            ? _getCorrespondingSectionNumber().replaceAll('Section ', '')
+                            ? _getCorrespondingSectionNumber()
+                                .replaceAll('Section ', '')
                             : 'NA',
                         style: const TextStyle(
                           fontSize: 16,
